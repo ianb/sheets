@@ -1,0 +1,50 @@
+html, body {
+  font-family: sans-serif;
+}
+
+div.file {
+  margin: 1em;
+}
+
+div.file.with-output-x {
+  background-color: #ddf;
+}
+
+.file textarea {
+  width: 100%;
+}
+
+#filename {
+  width: 10em;
+}
+
+code {
+  color: #009;
+  border-radius: 0;
+  background-color: transparent;
+  padding: 0;
+}
+
+.print-output {
+  border-left: 2px solid rgba(100, 100, 100, 0.3);
+}
+
+.print-expr {
+  opacity: 0.8;
+}
+
+ul.varlist {
+  display: inline-block;
+  padding: 0;
+}
+
+ul.varlist li {
+  display: inline;
+  list-style-type: none;
+  padding-right: 20px;
+}
+
+code.file {
+  background-color: #ddf;
+  border-radius: 2px;
+}

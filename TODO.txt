@@ -1,0 +1,2 @@
+* Make the dangerousSetInnerHTML with tooltip a component
+*

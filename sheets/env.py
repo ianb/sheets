@@ -6,7 +6,7 @@ import sys
 import types
 import builtins
 import astor
-from .htmlize import htmlize, htmlize_repr, htmlize_print, htmlize_short_repr
+from .htmlize import htmlize, htmlize_repr, htmlize_print, htmlize_short_repr, print_expr
 from .datalayer import Analysis, Execution, FileEdit
 from .router import send
 from . import stdlib
@@ -19,8 +19,10 @@ class Environment:
             "print": htmlize_print,
             "htmlize": htmlize,
             "htmlize_repr": htmlize_repr,
+            "print_expr": print_expr,
             "listdir": stdlib.listdir,
             "__builtins__": __builtins__,
+            "FILES": stdlib.FilesDict(self.path),
         }
         for name in stdlib.builtin_names:
             self.globals[name] = getattr(stdlib, name)
@@ -30,6 +32,8 @@ class Environment:
 
     def on_open(self):
         for path in os.listdir(self.path):
+            if path.endswith(".json"):
+                continue
             if not os.path.isfile(os.path.join(self.path, path)):
                 continue
             try:
@@ -205,14 +209,14 @@ class RewriteExprToPrint(astor.TreeWalk):
             for n in node.body]
 
     def rewrite_expr(self, node):
+        expr_string = astor.to_source(node)
+        node_string = ast.Str(s=expr_string)
         new_node = ast.Expr(
             ast.Call(
-                func=ast.Name(id='print', ctx=ast.Load()),
-                args=[node.value],
-                keywords=[
-                    ast.keyword(arg='passthrough', value=ast.NameConstant(value=True)),
-                    ast.keyword(arg='classname', value=ast.Str(s='print-expr')),
-                ]
+                func=ast.Name(id='print_expr', ctx=ast.Load()),
+                args=[node_string, node.value],
+                keywords=[],
+                starargs=None,
             )
         )
         ast.fix_missing_locations(new_node)

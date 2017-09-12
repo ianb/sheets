@@ -2,18 +2,29 @@ import os
 import base64
 import glob
 try:
+    import numpy as np
+except ImportError:
+    np = None
+try:
     from PIL import Image
     from PIL.ImageFile import ImageFile
 except ImportError:
     Image = None
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 from io import BytesIO
+import re
+import json
 from urllib.parse import quote as url_quote
 from tempita import html, HTMLTemplate, html_quote
 from .htmlize import htmlize
 from webob import Response
 from functools import singledispatch
+from collections import MutableMapping
 
-builtin_names = ["listdir", "save"]
+builtin_names = ["listdir", "save", "cv_image"]
 
 def make_data_url(content_type, content):
     return 'data:%s;base64,%s' % (content_type, base64.urlsafe_b64encode(content).decode('ascii').replace('\n', ''))
@@ -42,6 +53,60 @@ if Image:
     def save(o, path):
         o.save(path)
 
+if cv2 and Image:
+    def cv_image(an_array):
+        image = cv2.imencode(".png", an_array)[1].tostring()
+        input = BytesIO(image)
+        return Image.open(input)
+else:
+    def cv_image(an_array):
+        raise NotImplementedError("Libraries not installed")
+
+class FilesDict(MutableMapping):
+    def __init__(self, base="."):
+        self.base = base
+
+    def _fullpath(self, path):
+        path = os.path.join(self.base, path)
+        if not os.path.abspath(path).startswith(os.path.abspath(self.base)):
+            raise ValueError(
+                "Bad path {}, not under {}"
+                % (os.path.abspath(path), os.path.abspath(self.base)))
+        if path.startswith("./"):
+            path = path[2:]
+        return path
+
+    def __getitem__(self, path):
+        path = self._fullpath(path)
+        if not os.path.exists(path):
+            raise KeyError
+        return FileReference.frompath(path)
+
+    def __setitem__(self, path, value):
+        path = self._fullpath(path)
+        pathobj = FileReference.frompath(path)
+        if hasattr(pathobj, "save"):
+            pathobj.save(value)
+        else:
+            save(value, path)
+
+    def __delitem__(self, path):
+        path = self._fullpath(path)
+        if not os.path.exists(path):
+            raise KeyError("No such file: {}".format(path))
+        # FIXME: have some way to undo:
+        # os.unlink(path)
+
+    def __iter__(self):
+        for filename in os.listdir(self.base):
+            full = self._fullpath(filename)
+            if os.path.isdir(full):
+                continue
+            yield filename
+
+    def __len__(self):
+        return len(list(self))
+
 class FileReference(str):
 
     extension_map = {}
@@ -57,6 +122,14 @@ class FileReference(str):
             return html(not_exists_tmpl.substitute(f=self))
         return html(no_preview_tmpl.substitute(f=self))
 
+    num_re = re.compile(r'\d+')
+
+    def getnum(self):
+        s = os.path.splitext(str(self))[0]
+        matches = self.num_re.findall(s)
+        if not matches:
+            raise ValueError("File has no number: {}".format(self))
+        return int(matches[-1])
 
 class ImageReference(FileReference):
     def _repr_html_(self):
@@ -74,6 +147,12 @@ class ImageReference(FileReference):
                 im.close()
         else:
             raise NotImplementedError("You must  pip install pillow")
+
+    def opencv(self):
+        if cv2:
+            return cv2.imread(self)
+        else:
+            raise NotImplementedError("You must  pip install opencv-python")
 
 if Image:
     # FIXME: weakref doesn't work like we'd want it to...
@@ -97,6 +176,19 @@ FileReference.extension_map['.png'] = ImageReference
 FileReference.extension_map['.jpeg'] = ImageReference
 FileReference.extension_map['.jpg'] = ImageReference
 FileReference.extension_map['.gif'] = ImageReference
+
+class JsonReference(FileReference):
+
+    def open(self):
+        with open(self, 'r') as fp:
+            return json.load(fp)
+
+    def save(self, value):
+        with open(self, 'w') as fp:
+            json.dump(value, fp)
+
+FileReference.extension_map['.json'] = JsonReference
+
 
 not_exists_tmpl = HTMLTemplate('''\
 <code class="file" title="{{f}} does not exist"><s>{{f}}</s></code>\

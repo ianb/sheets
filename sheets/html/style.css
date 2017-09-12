@@ -48,3 +48,15 @@ code.file {
   background-color: #ddf;
   border-radius: 2px;
 }
+
+.output dt {
+  font-weight: normal;
+}
+
+.output dd {
+  margin-left: 20px;
+}
+
+.output dl {
+  border-left: 2px solid rgba(50, 50, 150, 0.5);
+}

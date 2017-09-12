@@ -163,3 +163,16 @@ def htmlize_print(*objects, sep=' ', end='\n', file=sys.stdout, flush=False, cla
     file.writehtml(body)
     if passthrough:
         return objects[0]
+
+def print_expr(expr_string, expr_value):
+    if expr_value is None:
+        # Don't print anything, just like the CLI
+        return None
+    if not hasattr(sys.stdout, "writehtml"):
+        print("Unexpected sys.stdout without .writehtml:", sys.stdout)
+        return expr_value
+    body = '<dl><dt><code>%s</code></dt><dd>%s</dd></dl>' % (
+        html_quote(expr_string),
+        htmlize(expr_value))
+    sys.stdout.writehtml(body)
+    return expr_value

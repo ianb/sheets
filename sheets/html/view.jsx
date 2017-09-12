@@ -48,7 +48,7 @@ class File extends React.Component {
   }
 
   render() {
-    if (!this.state.value) {
+    if (!this.state.value && this.state.value !== "") {
       console.error("Dead file:", this.props.name, model.files[this.props.name]);
     }
     let rows = this.state.value.split("\n").length + 1
@@ -162,7 +162,7 @@ class File extends React.Component {
 class Output extends React.Component {
   render() {
     let defines = null;
-    if (this.props.output && this.props.output.defines) {
+    if (this.props.output && this.props.output.defines && Object.keys(this.props.output.defines).length) {
       defines = [];
       for (let name in this.props.output.defines) {
         defines.push(

@@ -5,6 +5,7 @@ import time
 import sys
 import types
 import builtins
+import collections
 import astor
 from .htmlize import htmlize, htmlize_repr, htmlize_print, htmlize_short_repr, print_expr
 from .datalayer import Analysis, Execution, FileEdit
@@ -30,7 +31,9 @@ class Environment:
 
     predefined_names = set(["htmlize", "htmlize_repr", "parsed"])
 
-    def on_open(self):
+    def init_commands(self):
+        """Returns a list of commands that represent the existing state of the
+        filesystem"""
         for path in os.listdir(self.path):
             if path.endswith(".json"):
                 continue
@@ -39,17 +42,17 @@ class Environment:
             try:
                 with open(os.path.join(self.path, path), "r") as fp:
                     content = fp.read()
-                command = FileEdit(path, content, external_edit=True)
-                send(command)
+                yield FileEdit(filename=path, content=content, external_edit=True)
             except UnicodeDecodeError:
                 pass
 
-    def execute(self, filename, content):
-        print("Executing", filename)
+    def execute(self, filename, content, subexpressions=False):
+        print("Executing", filename, subexpressions)
         output = []
+        compiled = None
         try:
             parsed = ast.parse(content, filename, mode='exec')
-            RewriteExprToPrint().walk(parsed)
+            RewriteExprToPrint(subexpressions).walk(parsed)
             var_inspect = VariableInspector()
             var_inspect.walk(parsed)
             print("varsed used:", sorted(var_inspect.used), "set:", sorted(var_inspect.set), "imported:", var_inspect.imports)
@@ -61,11 +64,22 @@ class Environment:
             output.append(htmlize_repr(value))
 
         class Stdout:
+
+            total_exprs_limit = 100
+            expr_limit = 10
+
+            def __init__(self):
+                self.total_exprs_printed = 0
+                self.exprs_printed = collections.Counter()
+
             def write(self, content):
                 output.append(htmlize(content))
 
             def writehtml(self, content):
                 output.append(content)
+
+            def flush(self):
+                pass
 
         stdout = Stdout()
         orig_displayhook = sys.displayhook
@@ -80,7 +94,8 @@ class Environment:
         start = time.time()
         try:
             try:
-                exec(compiled, self.globals)
+                if compiled:
+                    exec(compiled, self.globals)
             except:
                 traceback.print_exc()
         finally:
@@ -108,6 +123,7 @@ class Environment:
             start_time=int(start * 1000),
             end_time=int(end * 1000),
             exec_time=int((end - start) * 1000),
+            with_subexpressions=subexpressions,
         )
         send(command)
 
@@ -125,7 +141,7 @@ class Environment:
             properties = var_inspect.json
         if properties != self._cached_analysis.get(filename):
             self._cached_analysis[filename] = properties
-            send(Analysis(filename, content, properties))
+            send(Analysis(filename=filename, content=content, properties=properties))
 
 
 class VariableInspector(astor.TreeWalk):
@@ -202,22 +218,76 @@ class VariableInspector(astor.TreeWalk):
             self.in_target = old_in_target
 
 class RewriteExprToPrint(astor.TreeWalk):
-    def pre_Module(self):
+
+    expr_node_types = """
+    UnaryOp
+    BinOp
+    BoolOp
+    Compare
+    Call
+    IfExp
+    Attribute
+    Subscript
+    ListComp SetComp GeneratorExp DictComp
+    """.split()
+    # Skipped:
+    #  UAdd USub Not Invert
+    #  Add Sub Mult Div FloorDiv Mod Pow LShift RShift BitOr BitXor BitAnd MatMult
+    #  And Or
+    #  Eq NotEq Lt Gt GtE Is IsNot In NotIn
+    #  Index Slice ExtSlice
+
+    def __init__(self, subexpressions=False):
+        self.subexpressions = subexpressions
+        self.id_counter = 0
+        astor.TreeWalk.__init__(self)
+        if self.subexpressions:
+            for method in self.expr_node_types:
+                self.pre_handlers[method] = self.save_node_name
+                self.post_handlers[method] = self.fixup_subexpressions
+            del self.post_handlers['Module']
+
+    def post_Name(self):
+        if not self.subexpressions:
+            return
+        if isinstance(self.cur_node.ctx, ast.Load):
+            self.replace(self.rewrite_expr(self.cur_node))
+
+    def post_Module(self):
         node = self.cur_node
         node.body = [
             self.rewrite_expr(n) if isinstance(n, ast.Expr) else n
             for n in node.body]
 
-    def rewrite_expr(self, node):
-        expr_string = astor.to_source(node)
+    def save_node_name(self):
+        self.cur_node.astor_repr = astor.to_source(self.cur_node)
+
+    def fixup_subexpressions(self):
+        new_node = self.rewrite_expr(self.cur_node, self.cur_node.astor_repr)
+        self.replace(new_node)
+
+    def rewrite_expr(self, node, expr_string=None):
+        if expr_string is None:
+            expr_string = astor.to_source(node)
         node_string = ast.Str(s=expr_string)
-        new_node = ast.Expr(
-            ast.Call(
+        self.id_counter += 1
+        if isinstance(node, ast.Expr):
+            new_node = ast.Expr(
+                ast.Call(
+                    func=ast.Name(id='print_expr', ctx=ast.Load()),
+                    args=[node_string, node.value, ast.Num(n=self.id_counter)],
+                    keywords=[],
+                    starargs=None,
+                )
+            )
+            new_node.is_print_expr = True
+        else:
+            new_node = ast.Call(
                 func=ast.Name(id='print_expr', ctx=ast.Load()),
-                args=[node_string, node.value],
+                args=[node_string, node, ast.Num(n=self.id_counter)],
                 keywords=[],
                 starargs=None,
             )
-        )
+            new_node.is_print_expr = True
         ast.fix_missing_locations(new_node)
         return new_node

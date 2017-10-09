@@ -6,13 +6,21 @@
 * Make images possible fields
 * Create JSON encoding of data
 * Create Pickle encoding of data
-* Same commands into a stream of some sort, replay on connect
-* Garbage collect those streams
 * Show when a file is in the process of being executed
 * Show progress of execution (intermediate work? Just a timer?)
-* Put a counter into loops, so loops can be tracked for progress
-  * Start with something simpler like for_reporter(iter)
+  * Show incremental output
+  * Put a counter into loops, so loops can be tracked for progress
+    * Start with something simpler like for_reporter(iter)
 * Consider https://github.com/buildo/react-autosize-textarea for textarea
 * Consider https://github.com/JedWatson/react-codemirror for textarea
 * Switch to a builder (webpack I guess)
 * Handle empty directories (currently nothing is rendered)
+* Use random number as the ID of the server, do full resync if the page isn't setup for the server
+* Allow draggable resizing of images
+* Markdown support
+  * Allow embedding code (that generates things) inside the Markdown
+  * Allow embedding fields in the Markdown (that can be read from code)
+  * Use https://github.com/benrlodge/react-simplemde-editor and https://simplemde.com/
+* Fix file editing
+* Re-enable history garbage collection
+*

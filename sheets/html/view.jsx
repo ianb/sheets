@@ -6,7 +6,8 @@ class Page extends React.Component {
     return <div className="container">
       {this.props.showHelp ? <Help /> : null}
       {this.props.showNavigation ? <Navigate {...this.props} /> : null}
-      <nav className="navbar navbar-inverse bg-inverse fixed-top">
+      <nav className="navbar navbar-inverse bg-inverse fixed-top" style={{flexDirection: "row"}}>
+        <CloudStatus live={this.props.connectionLive} direction={this.props.connectionDirection} />
         <span onClick={this.onShowHelp.bind(this)} className="navbar-text">Shortcuts: Ctrl+?</span>
       </nav>
 
@@ -38,6 +39,24 @@ class Page extends React.Component {
   onShowHelp() {
     model.showHelp = !model.showHelp;
     render();
+  }
+}
+
+class CloudStatus extends React.Component {
+  render() {
+    let className = "icon";
+    if (!this.props.live) {
+      className += " inactive";
+    }
+    let src = "/img/icons/cloud.svg";
+    if (this.props.direction == "up") {
+      src = "/img/icons/cloud-upload.svg";
+    } else if (this.props.direction == "down") {
+      src = "/img/icons/cloud-download.svg";
+    }
+    return <span className="navbar-text">
+      <img className={className} src={src} style={{marginRight: "5px"}} />
+    </span>;
   }
 }
 
@@ -108,8 +127,9 @@ class File extends React.Component {
 
   onKeyDown(event) {
     if ((event.key || event.code) == "Enter" && event.shiftKey) {
+      let subexpressions = !!event.ctrlKey;
       event.preventDefault();
-      executeFile(this.props.name);
+      executeFile(this.props.name, subexpressions);
       return false;
     }
   }
@@ -345,6 +365,10 @@ class Help extends React.Component {
           <tr>
             <td>Shift + Enter</td>
             <td>Execute current cell</td>
+          </tr>
+          <tr>
+            <td>Shift + Ctrl + Enter</td>
+            <td>Execute current cell, tracking subexpressions</td>
           </tr>
           <tr>
             <td>Command/Ctrl + Shift + A</td>

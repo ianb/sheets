@@ -5,6 +5,9 @@ class Model {
     this.files = new Map();
     this.showHelp = false;
     this.showNavigation = false;
+    this.connectionLive = false;
+    this.connectionDirection = null;
+    this._connectionTimeout = null;
   }
 
   applyCommand(command) {
@@ -13,7 +16,26 @@ class Model {
   }
 
   render() {
-    render();
+    if (window.render) {
+      render();
+    }
+  }
+
+  setConnectionDirection(dir) {
+    if (dir != "up" && dir != "down" && dir !== null) {
+      throw new Error(`Bad direction: ${dir}`);
+    }
+    this.connectionDirection = dir;
+    if (this._connectionTimeout) {
+      clearTimeout(this._connectionTimeout);
+      this._connectionTimeout = null;
+    }
+    if (dir) {
+      this._connectionTimeout = setTimeout(() => {
+        this.setConnectionDirection(null);
+        this.render();
+      }, 1000);
+    }
   }
 }
 
@@ -70,6 +92,7 @@ const ExecutionRequest = AllCommands.ExecutionRequest = class ExecutionRequest e
     super()
     this.filename = options.filename;
     this.content = options.content;
+    this.subexpressions = options.subexpressions;
   }
 };
 
@@ -107,6 +130,7 @@ const Execution = AllCommands.Execution = class Execution extends Command {
     this.start_time = options.start_time;
     this.end_time = options.end_time;
     this.exec_time = options.exec_time;
+    this.with_subexpressions = options.with_subexpressions
   }
   applyToModel(model) {
     let f = model.files.get(this.filename);

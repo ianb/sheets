@@ -1,6 +1,8 @@
 import os
+import sys
 from functools import partial
 import traceback
+import time
 
 def short_repr(s):
     v = repr(s)
@@ -10,14 +12,16 @@ def short_repr(s):
 
 class Model:
 
-    def __init__(self, env):
+    def __init__(self, env, history):
         self.files = {}
         self.tasks = []
         self.env = env
+        self.history = history
 
     def apply_command(self, command):
         command.apply_to_environment(self.env)
         command.apply_to_model(self)
+        self.history.save_command(command)
 
     def add_task(self, key, runner):
         for item in list(self.tasks):
@@ -34,16 +38,38 @@ class Model:
                 print("Error running task", runner)
                 traceback.print_exc()
 
+    def on_open(self, router):
+        self.history.clean_commands()
+        commands = self.history.get_commands()
+        if not commands:
+            commands = self.env.init_commands()
+        for command in commands:
+            router.send(command)
+
 class Command:
 
     attrs = None
     name = None
+    _id = None
+
+    def __init__(self, *, id=None):
+        self._id = id
+
+    @property
+    def id(self):
+        # FIXME: I'm not sure timestamps done lazily like this really gives
+        # the order we want, but... I guess?
+        if not self._id:
+            self._id = "c-%s" % time.time()
+        return self._id
 
     @property
     def asJson(self):
         attrs = self.attrs or self.__dict__.keys()
+        attrs = [a for a in attrs if a != "_id"]
         data = dict((attr, getattr(self, attr)) for attr in attrs)
         data["command"] = self.name or self.__class__.__name__
+        data["id"] = self.id
         return data
 
     def __repr__(self):
@@ -60,9 +86,13 @@ class Command:
     def apply_to_environment(self, env):
         pass
 
+    def scan_back(self, prev_commands):
+        pass
+
 class FileEdit(Command):
 
-    def __init__(self, filename, content, external_edit=False):
+    def __init__(self, *, filename, content, external_edit=False, id=None):
+        super().__init__(id=id)
         self.filename = filename
         self.content = content
         self.external_edit = external_edit
@@ -85,9 +115,19 @@ class FileEdit(Command):
         model.files[self.filename]["content"] = self.content
         model.add_task(("analyze", self.filename), partial(model.env.analyze, self.filename, self.content))
 
+    def scan_back(self, commands):
+        for prev in reversed(commands):
+            if isinstance(prev, Execution) and prev.filename == self.filename:
+                break
+            elif isinstance(prev, FileEdit) and prev.filename == self.filename:
+                yield prev
+            elif isinstance(prev, Analysis) and prev.filename == self.filename:
+                yield prev
+
 class FileDelete(Command):
 
-    def __init__(self, filename, external_edit=False):
+    def __init__(self, *, filename, external_edit=False, id=None):
+        super().__init__(id=id)
         self.filename = filename
         self.external_edit = external_edit
 
@@ -109,16 +149,22 @@ class FileDelete(Command):
 
 class ExecutionRequest(Command):
 
-    def __init__(self, filename, content):
+    def __init__(self, *, filename, content, subexpressions=False, id=None):
+        super().__init__(id=id)
         self.filename = filename
         self.content = content
+        self.subexpressions = subexpressions
 
     def apply_to_model(self, model):
-        model.add_task(("execute_request", self.filename), partial(model.env.execute, self.filename, self.content))
+        model.add_task(("execute_request", self.filename), partial(model.env.execute, self.filename, self.content, self.subexpressions))
+
+    def scan_back(self, commands):
+        yield self
 
 class Analysis(Command):
 
-    def __init__(self, filename, content, properties):
+    def __init__(self, *, filename, content, properties, id=None):
+        super().__init__(id=id)
         self.filename = filename
         self.content = content
         self.properties = properties
@@ -133,7 +179,8 @@ class Analysis(Command):
 
 class Execution(Command):
 
-    def __init__(self, *, filename, content, output, defines, start_time, end_time, exec_time):
+    def __init__(self, *, filename, content, output, defines, start_time, end_time, exec_time, with_subexpressions=False, id=None):
+        super().__init__(id=id)
         self.filename = filename
         self.content = content
         self.output = output
@@ -141,6 +188,7 @@ class Execution(Command):
         self.start_time = start_time
         self.end_time = end_time
         self.exec_time = exec_time
+        self.with_subexpressions = with_subexpressions
 
     def apply_to_model(self, model):
         if self.filename not in model.files:
@@ -150,3 +198,21 @@ class Execution(Command):
             "output": self.output,
             "defines": self.defines,
         }
+
+no_default = ['NO DEFAULT']
+
+def hydrate(data, *, if_invalid=no_default):
+    me = sys.modules[__name__]
+    command_name = data["command"]
+    CommandClass = getattr(me, command_name)
+    assert issubclass(CommandClass, Command)
+    assert CommandClass is not Command
+    del data["command"]
+    try:
+        command = CommandClass(**data)
+    except TypeError as e:
+        raise
+        if if_invalid is no_default:
+            raise
+        return if_invalid
+    return command

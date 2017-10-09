@@ -17,17 +17,12 @@ class Router:
         self.model.run_tasks()
 
     def incoming(self, data):
-        command_name = data["command"]
-        CommandClass = getattr(datalayer, command_name)
-        assert issubclass(CommandClass, datalayer.Command)
-        assert CommandClass is not datalayer.Command
-        del data["command"]
-        command = CommandClass(**data)
+        command = datalayer.hydrate(data)
         self.model.apply_command(command)
         self.model.run_tasks()
 
     def on_open(self):
-        self.env.on_open()
+        self.model.on_open(self)
         self.model.run_tasks()
 
     def register(self):

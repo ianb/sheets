@@ -60,3 +60,12 @@ code.file {
 .output dl {
   border-left: 2px solid rgba(50, 50, 150, 0.5);
 }
+
+.icon {
+  width: 16px;
+  height: 16px;
+}
+
+.icon.inactive {
+  opacity: 0.3;
+}

@@ -23,8 +23,16 @@ from .htmlize import htmlize
 from webob import Response
 from functools import singledispatch
 from collections import MutableMapping
+try:
+    from .matplotlibsupport import Plot
+except ImportError as e:
+    print("Could not import matplot support:", e)
 
-builtin_names = ["listdir", "save", "cv_image"]
+    class Plot:
+        def __init__(self, *args, **kw):
+            raise NotImplementedError("You must install matplotlib")
+
+builtin_names = ["listdir", "save", "cv_image", "Plot"]
 
 def make_data_url(content_type, content):
     return 'data:%s;base64,%s' % (content_type, base64.urlsafe_b64encode(content).decode('ascii').replace('\n', ''))

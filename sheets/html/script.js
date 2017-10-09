@@ -26,13 +26,21 @@ function deleteFile(filename) {
   send(command);
 }
 
-function executeFile(filename) {
+function executeFile(filename, subexpressions) {
   let command = new ExecutionRequest({
     filename,
     content: model.files.get(filename).content,
+    subexpressions,
   });
   send(command);
 }
+
+registerSocketListener((newStatus) => {
+  model.connectionLive = newStatus == "OPENED";
+  if (window.render) {
+    render();
+  }
+});
 
 if (typeof render == "undefined") {
   window.render = function (...args) {

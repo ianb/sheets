@@ -22,8 +22,10 @@ def main(path):
     from .env import Environment
     from .datalayer import Model
     from .router import Router
+    from .history import History
     env = Environment(path)
-    model = Model(env)
+    history = History(path)
+    model = Model(env, history)
     router = Router(env=env, model=model)
     router.register()
     print("Saving files in %s" % env.path)

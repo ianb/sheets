@@ -26,7 +26,11 @@ htmlize_dispatched = singledispatch(htmlize_plain)
 
 def htmlize(x):
     if hasattr(x, '_repr_html_'):
-        return html(x._repr_html_())
+        h = x._repr_html_()
+        if h is None:
+            print("Warning: object %r._repr_html_() returned None" % x)
+            h = html_quote(repr(x))
+        return html(str(h))
     return htmlize_dispatched(x)
 
 htmlize.register = htmlize_dispatched.register
@@ -40,7 +44,11 @@ def htmlize_repr_dispatched(x):
 
 def htmlize_repr(x):
     if hasattr(x, '_repr_html_'):
-        return html(x._repr_html_())
+        h = x._repr_html_()
+        if h is None:
+            print("Warning: %r._repr_html_() returned None" % x)
+            h = html_quote(repr(x))
+        return html(str(h))
     return htmlize_repr_dispatched(x)
 
 htmlize_repr.register = htmlize_repr_dispatched.register
@@ -164,15 +172,28 @@ def htmlize_print(*objects, sep=' ', end='\n', file=sys.stdout, flush=False, cla
     if passthrough:
         return objects[0]
 
-def print_expr(expr_string, expr_value):
+def print_expr(expr_string, expr_value, expr_id=None):
     if expr_value is None:
         # Don't print anything, just like the CLI
         return None
-    if not hasattr(sys.stdout, "writehtml"):
-        print("Unexpected sys.stdout without .writehtml:", sys.stdout)
+    if type(expr_value) in (types.ModuleType, types.BuiltinFunctionType):
+        # Modules and built-in functions are too boring
+        return expr_value
+    stdout = sys.stdout
+    if stdout.total_exprs_printed > stdout.total_exprs_limit or (expr_id and stdout.exprs_printed[expr_id] > stdout.expr_limit):
+        return expr_value
+    stdout.total_exprs_printed += 1
+    if expr_id:
+        stdout.exprs_printed[expr_id] += 1
+    if stdout.total_exprs_printed > stdout.total_exprs_limit:
+        expr_string += " (remaining expressions suppressed)"
+    if expr_id and stdout.exprs_printed[expr_id] > stdout.expr_limit:
+        expr_string += " (this expression now suppressed)"
+    if not hasattr(stdout, "writehtml"):
+        print("Unexpected sys.stdout without .writehtml:", stdout)
         return expr_value
     body = '<dl><dt><code>%s</code></dt><dd>%s</dd></dl>' % (
         html_quote(expr_string),
         htmlize(expr_value))
-    sys.stdout.writehtml(body)
+    stdout.writehtml(body)
     return expr_value

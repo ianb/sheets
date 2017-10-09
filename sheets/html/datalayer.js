@@ -63,9 +63,12 @@ const FileEdit = AllCommands.FileEdit = class FileEdit extends Command {
   }
 
   applyToModel(model) {
+    /*
+    Pretty sure this concept is just wrong, but especially with replay:
     if (!this.external_edit) {
       return;
     }
+    */
     if (!model.files.get(this.filename)) {
       model.files.set(this.filename, {});
     }

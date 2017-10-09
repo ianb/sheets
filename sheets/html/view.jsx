@@ -64,6 +64,7 @@ class File extends React.Component {
   constructor(props) {
     super(props);
     this.state = {value: this.props.content, collapsed: false};
+    this.seenValues = [];
   }
 
   render() {
@@ -89,7 +90,9 @@ class File extends React.Component {
   }
 
   componentWillReceiveProps(nextProps) {
-    if (nextProps.content != this.textareaEl.value) {
+    // seenValues is a really hacky way to avoid some overwrite problems
+    // something about the order and flow of change events should instead be fixed
+    if (nextProps.content != this.textareaEl.value && !this.seenValues.includes(this.textareaEl.value)) {
       let selectionStart = this.textareaEl.selectionStart;
       let selectionEnd = this.textareaEl.selectionEnd;
       this.textareaEl.value = nextProps.content;
@@ -102,6 +105,10 @@ class File extends React.Component {
   onChange(event) {
     let target = event.target;
     this.setState({value: target.value});
+    while (this.seenValues.length > 10) {
+      this.seenValues.shift();
+    }
+    this.seenValues.push(target.value)
     if (!this.updateTimeout) {
       this.updateTimeout = setTimeout(() => {
         updateFile(this.props.name, target.value);

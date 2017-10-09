@@ -26,7 +26,6 @@ class History:
         return list(commands)
 
     def clean_commands(self):
-        return
         commands = self.get_commands(return_invalid=True)
         remove_ids = []
         while commands:

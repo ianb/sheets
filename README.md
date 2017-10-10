@@ -5,6 +5,8 @@
 [<img src="https://readthedocs.org/projects/sheets/badge/?version=latest" />](https://sheets.readthedocs.io/en/latest/?badge=latest)
 [<img src="https://pyup.io/repos/github/ianb/sheets/shield.svg" />](https://pyup.io/repos/github/ianb/sheets/)
 
+Note: this a personal experiment. It's probably too hard to install and too flaky for anyone else to use right now.
+
 Like an interpreter / spreadsheet. More just like an interpreter now. Inspired/reacting to Jupyter Notebooks.
 
 * Free software: MIT license

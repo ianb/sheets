@@ -32,7 +32,7 @@ Features
 Goals
 -----
 
-See [TODO](TODO.md) for some short-term goals.
+See [TODO](./TODO.md) for some short-term goals.
 
 * Understand the dependency graph between cells. So if Cell 3 uses a variable or function defined in Cell 1, then we'd like to understand that changes to Cell 1 might invalidate Cell 3.
 * Do "experiments" in cells.  E.g., try something with some parameters (or even code/functions), and save the result for future comparison. (This is particularly inspired by use cases in AI and maybe data analysis, where there's not a "right" answer, but several possible approaches, often expensive to test.)

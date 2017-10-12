@@ -6,7 +6,6 @@
 * Make images possible fields
 * Create JSON encoding of data
 * Create Pickle encoding of data
-* Show when a file is in the process of being executed
 * Show progress of execution (intermediate work? Just a timer?)
   * Show incremental output
   * Put a counter into loops, so loops can be tracked for progress

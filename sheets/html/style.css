@@ -10,6 +10,10 @@ div.file.with-output-x {
   background-color: #ddf;
 }
 
+div.file.executing textarea {
+  background-color: #efe;
+}
+
 .file textarea {
   width: 100%;
 }

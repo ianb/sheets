@@ -97,6 +97,14 @@ const ExecutionRequest = AllCommands.ExecutionRequest = class ExecutionRequest e
     this.content = options.content;
     this.subexpressions = options.subexpressions;
   }
+
+  applyToModel(model) {
+    if (!model.files.get(this.filename)) {
+      model.files.set(this.filename, {});
+    }
+    let f = model.files.get(this.filename);
+    f.isExecuting = true;
+  }
 };
 
 const Analysis = AllCommands.Analysis = class Analysis extends Command {
@@ -145,5 +153,6 @@ const Execution = AllCommands.Execution = class Execution extends Command {
       output: this.output,
       defines: this.defines,
     };
+    f.isExecuting = false;
   }
 };

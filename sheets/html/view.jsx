@@ -72,7 +72,7 @@ class File extends React.Component {
       console.error("Dead file:", this.props.name, model.files[this.props.name]);
     }
     let rows = this.state.value.split("\n").length + 1
-    return <div className={`file card ${this.props.output ? 'with-output' : ''}`} ref={baseEl => this.baseEl = baseEl} data-name={this.props.name} data-collapsed={this.state.collapsed ? "1" : null}>
+    return <div className={`file card ${this.props.output ? 'with-output' : ''} ${this.props.isExecuting ? 'executing' : ''}`} ref={baseEl => this.baseEl = baseEl} data-name={this.props.name} data-collapsed={this.state.collapsed ? "1" : null}>
       <div className="card-header">
         <code>{this.props.name}</code>
         <div className="btn-group btn-group-sm" role="group">

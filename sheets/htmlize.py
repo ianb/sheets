@@ -3,8 +3,16 @@ import types
 import re
 import ast
 import astor
+import builtins
 from tempita import HTMLTemplate, html, html_quote
 from functools import singledispatch
+
+builtins_set = set()
+for _name in dir(builtins):
+    try:
+        builtins_set.add(getattr(builtins, _name))
+    except TypeError:
+        pass
 
 def strip_html(x):
     x = str(x)
@@ -176,6 +184,8 @@ def print_expr(expr_string, expr_value, expr_id=None):
     if expr_value is None:
         # Don't print anything, just like the CLI
         return None
+    if print_expr_should_ignore(expr_string, expr_value):
+        return expr_value
     if type(expr_value) in (types.ModuleType, types.BuiltinFunctionType):
         # Modules and built-in functions are too boring
         return expr_value
@@ -197,3 +207,26 @@ def print_expr(expr_string, expr_value, expr_id=None):
         htmlize(expr_value))
     stdout.writehtml(body)
     return expr_value
+
+def print_expr_should_ignore(expr, value):
+    """Returns True if given the expression name (expr) and value, it would be
+    too boring to print out the expression"""
+    if type(value) in (types.ModuleType, types.BuiltinFunctionType):
+        # Modules and built-in functions are too boring
+        return True
+    if isinstance(value, type):
+        class_name = value.__name__.split(".")[-1]
+        expr_name = expr.split(".")[-1]
+        if class_name == expr_name:
+            return True
+    if isinstance(value, types.MethodType):
+        method_name = value.__name__
+        prop_name = expr.split(".")[-1]
+        if method_name == prop_name:
+            return True
+    try:
+        if value in builtins_set:
+            return True
+    except TypeError:
+        pass
+    return False

@@ -21,8 +21,3 @@
   * Allow embedding code (that generates things) inside the Markdown
   * Allow embedding fields in the Markdown (that can be read from code)
   * Use https://github.com/benrlodge/react-simplemde-editor and https://simplemde.com/
-* Get rid of print_expr where the name of the value matches the object:
-  * Classes referred to by their base name
-  * Methods referred to as attribute access using their normal name
-  * Never show our builtins
-  * Never show any normally named builtins

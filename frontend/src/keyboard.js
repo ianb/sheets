@@ -1,3 +1,6 @@
+// shortcuts with: https://craig.is/killing/mice
+import * as mousetrap from './vendor/mousetrap.min';
+
 Mousetrap.bind(['ctrl+shift+a', 'command+shift+a'], () => {
   runAll();
   return false;
@@ -12,7 +15,7 @@ Mousetrap.bind('tab', (event) => {
 
 Mousetrap.bind(["ctrl+?", "ctrl+/"], () => {
   model.showHelp = !model.showHelp;
-  render();
+  renderPage();
   return false;
 });
 
@@ -56,12 +59,12 @@ Mousetrap.bind("shift+ctrl+e", () => {
 
 Mousetrap.bind("ctrl+t", (event) => {
   model.showNavigation = !model.showNavigation;
-  render();
+  renderPage();
 });
 
 Mousetrap.bind("escape", (event) => {
   model.showNavigation = model.showHelp = false;
-  render();
+  renderPage();
 });
 
 function insertAtCursor(field, text) {

@@ -32,8 +32,10 @@ except ImportError as e:
         def __init__(self, *args, **kw):
             raise NotImplementedError("You must install matplotlib")
 try:
-    from . import kerassupport
-    kerassupport
+    # FIXME: re-enable
+    if False:
+        from . import kerassupport
+        kerassupport
 except ImportError as e:
     print("No Keras support:", e)
 

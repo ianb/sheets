@@ -1,6 +1,6 @@
-let AllCommands = {};
+export let AllCommands = {};
 
-class Model {
+export class Model {
   constructor() {
     this.files = new Map();
     this.showHelp = false;
@@ -16,8 +16,8 @@ class Model {
   }
 
   render() {
-    if (window.render) {
-      render();
+    if (window.renderPage) {
+      renderPage();
     }
   }
 
@@ -39,7 +39,12 @@ class Model {
   }
 }
 
-class Command {
+export const model = new Model();
+
+// Expose this to the console:
+window.model = model;
+
+export class Command {
 
   toJSON() {
     let data = {};
@@ -54,7 +59,7 @@ class Command {
   }
 }
 
-const FileEdit = AllCommands.FileEdit = class FileEdit extends Command {
+export const FileEdit = AllCommands.FileEdit = class FileEdit extends Command {
   constructor(options) {
     super()
     this.filename = options.filename;
@@ -78,7 +83,7 @@ const FileEdit = AllCommands.FileEdit = class FileEdit extends Command {
   }
 };
 
-const FileDelete = AllCommands.FileDelete = class FileDelete extends Command {
+export const FileDelete = AllCommands.FileDelete = class FileDelete extends Command {
   constructor(options) {
     super()
     this.filename = options.filename;
@@ -90,7 +95,7 @@ const FileDelete = AllCommands.FileDelete = class FileDelete extends Command {
   }
 };
 
-const ExecutionRequest = AllCommands.ExecutionRequest = class ExecutionRequest extends Command {
+export const ExecutionRequest = AllCommands.ExecutionRequest = class ExecutionRequest extends Command {
   constructor(options) {
     super()
     this.filename = options.filename;
@@ -107,7 +112,7 @@ const ExecutionRequest = AllCommands.ExecutionRequest = class ExecutionRequest e
   }
 };
 
-const Analysis = AllCommands.Analysis = class Analysis extends Command {
+export const Analysis = AllCommands.Analysis = class Analysis extends Command {
   constructor(options) {
     super()
     this.filename = options.filename;
@@ -131,12 +136,13 @@ const Analysis = AllCommands.Analysis = class Analysis extends Command {
   }
 };
 
-const Execution = AllCommands.Execution = class Execution extends Command {
+export const Execution = AllCommands.Execution = class Execution extends Command {
   constructor(options) {
     super()
     this.filename = options.filename;
     this.content = options.content;
     this.output = options.output;
+    this.emitted = options.emitted;
     this.defines = options.defines;
     this.start_time = options.start_time;
     this.end_time = options.end_time;
@@ -151,6 +157,7 @@ const Execution = AllCommands.Execution = class Execution extends Command {
     f.output = {
       content: this.content,
       output: this.output,
+      emitted: this.emitted,
       defines: this.defines,
     };
     f.isExecuting = false;

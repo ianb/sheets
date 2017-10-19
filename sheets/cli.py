@@ -23,6 +23,8 @@ def main(path):
     from .datalayer import Model
     from .router import Router
     from .history import History
+    from . import importwatch
+    importwatch.activate()
     env = Environment(path)
     history = History(path)
     model = Model(env, history)

@@ -20,3 +20,16 @@
   * Allow embedding code (that generates things) inside the Markdown
   * Allow embedding fields in the Markdown (that can be read from code)
   * Use https://github.com/benrlodge/react-simplemde-editor and https://simplemde.com/
+* Move to JSON instead of HTML from the server
+  * Have React components to render them
+  * Move "objects" that are referrable to a specially-named key, like `{__objects: ["uuid1", "uuid2"]}` – scan deeply for those objects to know what to store/keep.
+  * When rendering the renderer should be told if a remote object is alive or dead
+* Switch to Semantic UI: https://react.semantic-ui.com/introduction (mostly done)
+  * Tabs for something: https://react.semantic-ui.com/modules/tab
+  * Sidebar for something: https://react.semantic-ui.com/modules/sidebar
+  * Search for navigating items: https://react.semantic-ui.com/modules/search
+  * Popup for image previews: https://react.semantic-ui.com/modules/popup
+  * Modal for help: https://react.semantic-ui.com/modules/modal
+  * Table for numpy arrays: https://react.semantic-ui.com/collections/table
+  * Loader during execution: https://react.semantic-ui.com/elements/loader
+  * Maybe labels for variable definitions: https://react.semantic-ui.com/elements/label

@@ -43,6 +43,7 @@ class History:
         batch = rocksdb.WriteBatch()
         for id in remove_ids:
             id = id.encode('ascii')
-            print("Deleting", id)
+            data = self.db.get(id)
+            print("Deleting", id.decode('ascii'), data)
             batch.delete(id)
             self.db.write(batch)

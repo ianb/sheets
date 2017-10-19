@@ -1,17 +1,19 @@
+import React from 'react';
+import * as ReactDOM from 'react-dom';
+import { Button, Container, Dropdown, Menu, Header, Icon, TextArea, Card, Grid } from 'semantic-ui-react';
+import { model } from './datalayer';
+import { updateFile, deleteFile, executeFile } from './script';
+
 class Page extends React.Component {
   render() {
     let filenames = Array.from(this.props.files.keys());
     filenames.sort()
     let files = filenames.map((name, index) => <File key={name} name={name} index={index} {...this.props.files.get(name)} />);
-    return <div className="container">
+    return <div>
       {this.props.showHelp ? <Help /> : null}
       {this.props.showNavigation ? <Navigate {...this.props} /> : null}
-      <nav className="navbar navbar-inverse bg-inverse fixed-top" style={{flexDirection: "row"}}>
-        <CloudStatus live={this.props.connectionLive} direction={this.props.connectionDirection} />
-        <span onClick={this.onShowHelp.bind(this)} className="navbar-text">Shortcuts: Ctrl+?</span>
-      </nav>
-
-      <div className="container" style={{paddingTop: "50px"}}>
+      <PageMenu {...this.props} />
+      <Container style={{ marginTop: '7em' }}>
         {files}
         <fieldset>
           <legend>Add a file</legend>
@@ -20,10 +22,9 @@ class Page extends React.Component {
             <button type="submit">Add</button>
           </form>
         </fieldset>
-      </div>
+      </Container>
 
       <div style={{height: "30em"}}>
-
       </div>
     </div>;
   }
@@ -36,27 +37,61 @@ class Page extends React.Component {
     return false;
   }
 
+}
+
+class PageMenu extends React.Component {
+
+  render() {
+    // See https://github.com/Semantic-Org/Semantic-UI-React/blob/master/docs/app/Layouts/FixedMenuLayout.js
+    // for some examples
+    // https://react.semantic-ui.com/layouts/fixed-menu
+    return <Menu fixed='top' inverted>
+      <Container>
+        <CloudStatus live={this.props.connectionLive} direction={this.props.connectionDirection} />
+        <Dropdown item simple text='Dropdown'>
+          <Dropdown.Menu>
+            <Dropdown.Item>List Item</Dropdown.Item>
+            <Dropdown.Item>List Item</Dropdown.Item>
+            <Dropdown.Divider />
+            <Dropdown.Header>Header Item</Dropdown.Header>
+            <Dropdown.Item>
+              <i className='dropdown icon' />
+              <span className='text'>Submenu</span>
+              <Dropdown.Menu>
+                <Dropdown.Item>List Item</Dropdown.Item>
+                <Dropdown.Item>List Item</Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown.Item>
+            <Dropdown.Item>List Item</Dropdown.Item>
+          </Dropdown.Menu>
+        </Dropdown>
+        <Menu.Item as="a" onClick={this.onShowHelp.bind(this)}>Shortcuts: Ctrl+?</Menu.Item>
+      </Container>
+    </Menu>;
+  }
+
   onShowHelp() {
     model.showHelp = !model.showHelp;
-    render();
+    renderPage();
   }
 }
 
 class CloudStatus extends React.Component {
   render() {
-    let className = "icon";
+    let name = "cloud";
+    let disabled = false;
     if (!this.props.live) {
-      className += " inactive";
+      disabled = true;
     }
     let src = "/img/icons/cloud.svg";
     if (this.props.direction == "up") {
-      src = "/img/icons/cloud-upload.svg";
+      name = "cloud upload";
     } else if (this.props.direction == "down") {
-      src = "/img/icons/cloud-download.svg";
+      name = "cloud download";
     }
-    return <span className="navbar-text">
-      <img className={className} src={src} style={{marginRight: "5px"}} />
-    </span>;
+    return <Menu.Item header>
+      <Icon name={name} disabled={disabled} />
+    </Menu.Item>;
   }
 }
 
@@ -72,32 +107,50 @@ class File extends React.Component {
       console.error("Dead file:", this.props.name, model.files[this.props.name]);
     }
     let rows = this.state.value.split("\n").length + 1
-    return <div className={`file card ${this.props.output ? 'with-output' : ''} ${this.props.isExecuting ? 'executing' : ''}`} ref={baseEl => this.baseEl = baseEl} data-name={this.props.name} data-collapsed={this.state.collapsed ? "1" : null}>
-      <div className="card-header">
-        <code>{this.props.name}</code>
-        <div className="btn-group btn-group-sm" role="group">
-          <button type="button" className="btn btn-danger" onClick={this.onDelete.bind(this)}>del</button>
-          <button type="button" className="btn btn-secondary" style={{width: "2em"}} onClick={this.onCollapse.bind(this)}>{this.state.collapsed ? '+' : '-'}</button>
-        </div>
-      </div>
-      <div className="card-body">
-        {this.state.collapsed ? null :
-          <textarea ref={textareaEl => this.textareaEl = textareaEl} tabIndex={this.props.index + 1} className="mousetrap" style={{height: (rows * 1.1) + "em"}} onFocus={this.onFocus.bind(this)} defaultValue={this.state.value} onChange={this.onChange.bind(this)} onKeyDown={this.onKeyDown.bind(this)}></textarea>
-        }
-        <Output content={this.state.value} output={this.props.output} analysis={this.props.analysis} />
-      </div>
+    return <div ref={baseEl => this.baseEl = baseEl} data-name={this.props.name} data-collapsed={this.state.collapsed ? "1" : null}>
+      <Card style={{width: "100%", marginBottom: "1em"}}>
+        <Card.Content>
+          <Card.Header>
+            <Grid>
+              <Grid.Column floated="left">
+                <code>{this.props.name}</code>
+              </Grid.Column>
+              <Grid.Column floated="right" width={2}>
+                <Container textAlign="right" style={{whiteSpace: "nowrap"}}>
+                  <Button size="mini" onClick={this.onDelete.bind(this)} negative>del</Button>
+                  <Button size="mini" onClick={this.onCollapse.bind(this)}>{this.state.collapsed ? '+' : '-'}</Button>
+                </Container>
+              </Grid.Column>
+            </Grid>
+          </Card.Header>
+        </Card.Content>
+        <Card.Content>
+          {this.state.collapsed ? null :
+            <TextArea tabIndex={this.props.index + 1} className="mousetrap" autoHeight rows={4} style={{width: "100%"}} onFocus={this.onFocus.bind(this)} defaultValue={this.state.value} onChange={this.onChange.bind(this)} onKeyDown={this.onKeyDown.bind(this)}></TextArea>
+          }
+          <Output content={this.state.value} output={this.props.output} analysis={this.props.analysis} />
+        </Card.Content>
+      </Card>
     </div>;
+  }
+
+  get textarea() {
+    return this.baseEl.querySelector("textarea");
   }
 
   componentWillReceiveProps(nextProps) {
     // seenValues is a really hacky way to avoid some overwrite problems
     // something about the order and flow of change events should instead be fixed
-    if (nextProps.content != this.textareaEl.value && !this.seenValues.includes(this.textareaEl.value)) {
-      let selectionStart = this.textareaEl.selectionStart;
-      let selectionEnd = this.textareaEl.selectionEnd;
-      this.textareaEl.value = nextProps.content;
-      this.textareaEl.selectionStart = selectionStart;
-      this.textareaEl.selectionEnd = selectionEnd;
+    if (!this.textarea) {
+      console.log("Huh, no textarea");
+      return;
+    }
+    if (nextProps.content != this.textarea.value && !this.seenValues.includes(this.textarea.value)) {
+      let selectionStart = this.textarea.selectionStart;
+      let selectionEnd = this.textarea.selectionEnd;
+      this.textarea.value = nextProps.content;
+      this.textarea.selectionStart = selectionStart;
+      this.textarea.selectionEnd = selectionEnd;
     }
     this.setState({value: nextProps.content});
   }
@@ -141,29 +194,21 @@ class File extends React.Component {
     }
   }
 
-  refreshHeight() {
-    if (this.textareaEl) {
-      let idealHeight = this.textareaEl.scrollHeight;
-      this.textareaEl.style.height = idealHeight + "px";
-    }
-  }
-
   refreshFocus() {
     if (!model.showNavigation && model.focusName == this.props.name && !this.state.collapsed) {
-      this.textareaEl.focus();
+      this.textarea.focus();
     }
   }
 
   refreshSelection() {
     if (this.selectionStart !== undefined) {
       console.log("reset selection", this.selectionStart, this.selectionEnd);
-      this.textareaEl.selectionStart = this.selectionStart;
-      this.textareaEl.selectionEnd = this.selectionEnd;
+      this.textarea.selectionStart = this.selectionStart;
+      this.textarea.selectionEnd = this.selectionEnd;
     }
   }
 
   componentDidMount() {
-    this.refreshHeight();
     this.refreshFocus();
     this.refreshSelection();
     this.baseEl.addEventListener("collapse", () => {
@@ -175,14 +220,13 @@ class File extends React.Component {
   }
 
   componentDidUpdate() {
-    this.refreshHeight();
     this.refreshFocus();
     this.refreshSelection();
   }
 
   componentWillUnmount() {
-    this.selectionStart = this.textareaEl.selectionStart;
-    this.selectionEnd = this.textareaEl.selectionEnd;
+    this.selectionStart = this.textarea.selectionStart;
+    this.selectionEnd = this.textarea.selectionEnd;
   }
 }
 
@@ -209,7 +253,9 @@ class Output extends React.Component {
       // let set = this.makeList("Sets:", this.props.output.variables_set);
     }
     let output = null
-    if (this.props.output && this.props.output.output) {
+    if (this.props.output && this.props.output.emitted && this.props.output.emitted.length) {
+      output = this.renderEmitted(this.props.output.emitted);
+    } else if (this.props.output && this.props.output.output) {
       output = <div className="output" ref={outputEl => this.outputEl = outputEl} dangerouslySetInnerHTML={{__html: this.props.output.output}}></div>;
       if (this.props.output.content != this.props.content) {
         output = <div>
@@ -226,6 +272,21 @@ class Output extends React.Component {
     </div>;
   }
 
+  renderEmitted(emitted) {
+    let items = [];
+    for (let i=0; i<emitted.length; i++) {
+      let item = emitted[i];
+      items.push(this.renderEmittedItem(item, i));
+    }
+    return <div>
+      {items}
+    </div>
+  }
+
+  renderEmittedItem(item, index) {
+    return renderRemoteItem(item, index);
+  }
+
   makeList(title, items) {
     if (!items || !items.length) {
       return null;
@@ -237,14 +298,6 @@ class Output extends React.Component {
     return <div>
       {title} <ul className="varlist">{lis}</ul>
     </div>;
-  }
-
-  componentDidMount() {
-    $(this.outputEl).find('[data-toggle="tooltip"]').tooltip();
-  }
-
-  componentDidUpdate() {
-    this.componentDidMount();
   }
 
 }
@@ -332,6 +385,7 @@ class Navigate extends React.Component {
 
 class Modal extends React.Component {
   render() {
+    // FIXME: convert to Semantic
     return <div className="modal" ref={modalEl => this.modalEl = modalEl}>
       <div className="modal-dialog" role="document">
         <div className="modal-content">
@@ -352,16 +406,6 @@ class Modal extends React.Component {
     </div>;
   }
 
-  componentDidMount() {
-    $(this.modalEl).modal("show");
-    $(this.modalEl).on("hidden.bs.modal", () => {
-      this.props.onClose();
-    });
-  }
-
-  componentWillUnmount() {
-    $(this.modalEl).modal("hide");
-  }
 }
 
 class Help extends React.Component {
@@ -400,13 +444,124 @@ class Help extends React.Component {
 
   onClose() {
     model.showHelp = false;
-    render();
+    renderPage();
   }
 }
 
-function render() {
-  let body = <Page {...model} />;
-  ReactDOM.render(body, document.getElementById("react-container"));
+function renderRemoteItem(item, key) {
+  let type = item.type;
+  let Factory = Factories[type] || GenericFactory;
+  return <Factory key={key} {...item} />;
 }
+
+const Factories = {};
+
+class GenericFactory extends React.Component {
+  render() {
+    return <pre>
+      {JSON.stringify(this.props, null, '  ')}
+    </pre>;
+  }
+}
+
+Factories.plain_repr = class plain_repr extends React.Component {
+  render() {
+    return <code>{this.props.repr}</code>;
+  }
+};
+
+Factories.plain_str = class plain_str extends React.Component {
+  render() {
+    return <code>{this.props.str}</code>;
+  }
+};
+
+Factories.str = class str extends React.Component {
+  render() {
+    return <code>{JSON.stringify(this.props.str)}</code>;
+  }
+};
+
+Factories.explicit_html = class explicit_html extends React.Component {
+  render() {
+    return <div dangerouslySetInnerHTML={{__html: this.props.html}} />;
+  }
+};
+
+Factories.FunctionType = class FunctionType extends React.Component {
+  render() {
+    return <code>{this.props.name}()</code>;
+  }
+};
+
+Factories["class"] = class PythonClass extends React.Component {
+  render() {
+    return <code>class {this.props.name}</code>;
+  }
+};
+
+Factories.tuple = Factories.list = class list_tuple extends React.Component {
+  render() {
+    let parts = [];
+    if (this.props.type == "tuple") {
+      parts.push(<code key="start">(</code>);
+    } else {
+      parts.push(<code key="start">[</code>);
+    }
+    for (let i=0; i<this.props.content.length; i++) {
+      let item = this.props.contents[i];
+      parts.push(renderRemoteItem(item, i));
+    }
+    if (this.props.type == "tuple") {
+      if (this.props.content.length === 1) {
+        parts.push(<code key="end">,)</code>);
+      } else {
+        parts.push(<code key="end">)</code>);
+      }
+    } else {
+      parts.push(<code key="end">]</code>);
+    }
+    return <div>{parts}</div>;
+  }
+};
+
+Factories.print_expr = class print_expr extends React.Component {
+  render() {
+    return <dl>
+      <dt><code>{this.props.expr_string}</code></dt>
+      <dd>{renderRemoteItem(this.props.expr_value)}</dd>
+    </dl>;
+  }
+};
+
+Factories.print = class print extends React.Component {
+  render() {
+    let parts = [];
+    for (let i=0; i < this.props.parts.length; i++) {
+      let item = this.props.parts[i];
+      if (item.type === "str") {
+        parts.push(item.str);
+      } else {
+        parts.push(renderRemoteItem(item, i));
+      }
+    }
+    return <div>
+      {parts}
+    </div>;
+  }
+};
+
+Factories.dump = class dump extends React.Component {
+  render() {
+    return <pre>{this.props.dump}</pre>;
+  }
+};
+
+export function renderPage() {
+  let body = <Page {...model} />;
+  ReactDOM.render(body, document.getElementById("root"));
+};
+
+window.renderPage = renderPage;
 
 console.log("finished loading view.jsx");

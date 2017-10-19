@@ -8,7 +8,7 @@ import os
 from urllib.parse import quote as url_quote
 
 base = os.path.dirname(os.path.abspath(__file__))
-html_path = os.path.join(base, 'html')
+html_path = os.path.abspath(os.path.join(base, '../frontend/public'))
 
 static_app = webob.static.DirectoryApp(html_path, cache_control="none")
 

@@ -1,4 +1,5 @@
-// shortcuts with: https://craig.is/killing/mice
+import { model, FileEdit, FileDelete, ExecutionRequest } from './datalayer';
+import { openSocket, registerSocketListener, send } from './socket';
 
 function runAll() {
   names = Array.from(model.files.keys());
@@ -8,11 +9,9 @@ function runAll() {
   }
 }
 
-let model = new Model();
-
 openSocket();
 
-function updateFile(filename, content) {
+export function updateFile(filename, content) {
   let command = new FileEdit({filename, content});
   if (!model.files.get(filename)) {
     model.files.set(filename, {});
@@ -21,12 +20,12 @@ function updateFile(filename, content) {
   send(command);
 }
 
-function deleteFile(filename) {
+export function deleteFile(filename) {
   let command = new FileDelete({filename});
   send(command);
 }
 
-function executeFile(filename, subexpressions) {
+export function executeFile(filename, subexpressions) {
   let command = new ExecutionRequest({
     filename,
     content: model.files.get(filename).content,
@@ -37,15 +36,7 @@ function executeFile(filename, subexpressions) {
 
 registerSocketListener((newStatus) => {
   model.connectionLive = newStatus == "OPENED";
-  if (window.render) {
-    render();
+  if (window.renderPage) {
+    renderPage();
   }
 });
-
-if (typeof render == "undefined") {
-  window.render = function (...args) {
-    setTimeout(() => {
-      render(...args);
-    }, 100);
-  };
-}

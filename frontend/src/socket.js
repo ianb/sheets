@@ -1,7 +1,9 @@
+import { model, AllCommands, Command } from './datalayer';
+
 let socket;
 let socketStatus;
 
-function openSocket() {
+export function openSocket() {
   if (socket) {
     socket.onclose = null;
     socket.close();
@@ -26,10 +28,11 @@ function openSocket() {
   };
 }
 
-function registerSocketListener(callback) {
+export function registerSocketListener(callback) {
   registerSocketListener.callbacks.push(callback);
   callback(socketStatus);
-}
+};
+
 registerSocketListener.callbacks = [];
 
 function sendSocketStatus(newStatus) {
@@ -56,7 +59,7 @@ function incoming(o) {
   model.applyCommand(command);
 }
 
-function send(command) {
+export function send(command) {
   if (!command || (!(command instanceof Command))) {
     throw new Error(`Bad command: ${command}`);
   }

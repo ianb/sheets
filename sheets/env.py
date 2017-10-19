@@ -7,20 +7,26 @@ import types
 import builtins
 import collections
 import astor
-from .htmlize import htmlize, htmlize_repr, htmlize_print, htmlize_short_repr, print_expr
+from .htmlize import htmlize, htmlize_repr, htmlize_short_repr
+from .jsonify import jsonify, jsonify_print, jsonify_print_expr
 from .datalayer import Analysis, Execution, FileEdit
 from .router import send
 from . import stdlib
+
+def now():
+    return int(time.time() * 1000)
 
 class Environment:
 
     def __init__(self, path):
         self.path = path
         self.globals = {
-            "print": htmlize_print,
             "htmlize": htmlize,
             "htmlize_repr": htmlize_repr,
-            "print_expr": print_expr,
+            "print": jsonify_print,
+            "print_expr": jsonify_print_expr,
+            "jsonify": jsonify,
+            "jsonify_print": jsonify_print,
             "listdir": stdlib.listdir,
             "__builtins__": __builtins__,
             "FILES": stdlib.FilesDict(self.path),
@@ -48,7 +54,7 @@ class Environment:
 
     def execute(self, filename, content, subexpressions=False):
         print("Executing", filename, subexpressions)
-        output = []
+        stdout = Stdout()
         compiled = None
         try:
             parsed = ast.parse(content, filename, mode='exec')
@@ -58,30 +64,11 @@ class Environment:
             print("varsed used:", sorted(var_inspect.used), "set:", sorted(var_inspect.set), "imported:", var_inspect.imports)
             compiled = compile(parsed, filename, 'exec')
         except:
-            output.append(htmlize(traceback.format_exc()))
+            stdout.write(traceback.format_exc())
 
         def displayhook(value):
-            output.append(htmlize_repr(value))
+            stdout.write_repr(value)
 
-        class Stdout:
-
-            total_exprs_limit = 100
-            expr_limit = 10
-
-            def __init__(self):
-                self.total_exprs_printed = 0
-                self.exprs_printed = collections.Counter()
-
-            def write(self, content):
-                output.append(htmlize(content))
-
-            def writehtml(self, content):
-                output.append(content)
-
-            def flush(self):
-                pass
-
-        stdout = Stdout()
         orig_displayhook = sys.displayhook
         sys.displayhook = displayhook
         orig_stdout = sys.stdout
@@ -110,6 +97,7 @@ class Environment:
         defines = dict(
             (key, {
                 "repr": str(htmlize_short_repr(local_scope[key])),
+                "json": jsonify(local_scope[key]),
                 "type": str(type(local_scope[key])),
                 "self_naming": getattr(htmlize_short_repr(local_scope[key]), "self_naming", False),
             })
@@ -118,7 +106,8 @@ class Environment:
         command = Execution(
             filename=filename,
             content=content,
-            output="".join(str(x) for x in output),
+            output="".join(str(x) for x in stdout.html_output),
+            emitted=stdout.emitted,
             defines=defines,
             start_time=int(start * 1000),
             end_time=int(end * 1000),
@@ -291,3 +280,49 @@ class RewriteExprToPrint(astor.TreeWalk):
             new_node.is_print_expr = True
         ast.fix_missing_locations(new_node)
         return new_node
+
+
+class Stdout:
+
+    total_exprs_limit = 100
+    expr_limit = 10
+
+    def __init__(self):
+        self.html_output = []
+        self.emitted = []
+        self.total_exprs_printed = 0
+        self.exprs_printed = collections.Counter()
+
+    def write(self, content):
+        h = htmlize(content)
+        self.html_output.append(h)
+        self.emitted.append({
+            "type": "print",
+            "time": now(),
+            "parts": [{"type": "str", "str": content, "html": str(h)}],
+        })
+
+    def writehtml(self, content):
+        self.html_output.append(content)
+        self.emitted.append({
+            "type": "explicit_html",
+            "time": now(),
+            "html": str(content),
+        })
+
+    def writejson(self, json):
+        assert json.get("type"), "JSON objects must have a type"
+        json.setdefault("time", now())
+        self.emitted.append(json)
+
+    def write_repr(self, o):
+        h = htmlize_repr(o)
+        self.html_output.append(h)
+        self.emitted.append({
+            "type": "plain_repr",
+            "time": now(),
+            "html": str(h)
+        })
+
+    def flush(self):
+        pass

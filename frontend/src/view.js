@@ -1,6 +1,6 @@
 import React from 'react';
 import * as ReactDOM from 'react-dom';
-import { Button, Container, Dropdown, Menu, Header, Icon, TextArea, Card, Grid } from 'semantic-ui-react';
+import { Button, Container, Dropdown, Menu, Header, Icon, TextArea, Card, Grid, Popup } from 'semantic-ui-react';
 import { model } from './datalayer';
 import { updateFile, deleteFile, executeFile } from './script';
 
@@ -79,9 +79,11 @@ class PageMenu extends React.Component {
 class CloudStatus extends React.Component {
   render() {
     let name = "cloud";
+    let color = undefined;
     let disabled = false;
     if (!this.props.live) {
       disabled = true;
+      color = "red";
     }
     let src = "/img/icons/cloud.svg";
     if (this.props.direction == "up") {
@@ -90,7 +92,7 @@ class CloudStatus extends React.Component {
       name = "cloud download";
     }
     return <Menu.Item header>
-      <Icon name={name} disabled={disabled} />
+      <Icon color={color} name={name} disabled={disabled} />
     </Menu.Item>;
   }
 }
@@ -135,7 +137,7 @@ class File extends React.Component {
   }
 
   get textarea() {
-    return this.baseEl.querySelector("textarea");
+    return this.baseEl && this.baseEl.querySelector("textarea");
   }
 
   componentWillReceiveProps(nextProps) {
@@ -448,10 +450,11 @@ class Help extends React.Component {
   }
 }
 
-function renderRemoteItem(item, key) {
+function renderRemoteItem(item, key, extraProps) {
+  extraProps = extraProps || {};
   let type = item.type;
   let Factory = Factories[type] || GenericFactory;
-  return <Factory key={key} {...item} />;
+  return <Factory key={key} {...item} {...extraProps} />;
 }
 
 const Factories = {};
@@ -554,6 +557,47 @@ Factories.print = class print extends React.Component {
 Factories.dump = class dump extends React.Component {
   render() {
     return <pre>{this.props.dump}</pre>;
+  }
+};
+
+Factories.image = class image extends React.Component {
+  render() {
+    return <img style={{width: "180px", height: "auto"}} src={this.props.url} />;
+  }
+};
+
+Factories.filename = class filename extends React.Component {
+  render() {
+    let filename = this.props.filename;
+    if (this.props.base && filename.startsWith(this.props.base)) {
+      filename = filename.substr(this.props.base.length);
+      while (filename.charAt(0) == "/") {
+        filename = filename.substr(1);
+      }
+    }
+    console.log("filename", this.props.filename, filename, this.props.base);
+    if (this.props.embedded) {
+      return <Popup trigger={(
+          <code>{filename}</code>
+        )}>
+        {renderRemoteItem(this.props.embedded)}
+      </Popup>;
+    }
+    return <code>{filename}</code>;
+  }
+};
+
+Factories.FilesDict = class FilesDict extends React.Component {
+  render() {
+    console.log("render files", this.props.files);
+    return <div>
+      Files in <code>{this.props.base}</code>:
+      <ul>
+        {this.props.files.map(
+          (item, index) => <li key={index}>{renderRemoteItem(item, null, {base: this.props.base})}</li>
+        )}
+      </ul>
+    </div>;
   }
 };
 

@@ -7,7 +7,7 @@ import types
 import builtins
 import collections
 import astor
-from .htmlize import htmlize, htmlize_repr, htmlize_short_repr
+import weakref
 from .jsonify import jsonify, jsonify_print, jsonify_print_expr
 from .datalayer import Analysis, Execution, FileEdit
 from .router import send
@@ -18,11 +18,13 @@ def now():
 
 class Environment:
 
+    extra_globals = {}
+
+    active = weakref.WeakSet()
+
     def __init__(self, path):
         self.path = path
         self.globals = {
-            "htmlize": htmlize,
-            "htmlize_repr": htmlize_repr,
             "print": jsonify_print,
             "print_expr": jsonify_print_expr,
             "jsonify": jsonify,
@@ -34,8 +36,9 @@ class Environment:
         for name in stdlib.builtin_names:
             self.globals[name] = getattr(stdlib, name)
         self._cached_analysis = {}
+        self.active.add(self)
 
-    predefined_names = set(["htmlize", "htmlize_repr", "parsed"])
+    predefined_names = set(["parsed"])
 
     def init_commands(self):
         """Returns a list of commands that represent the existing state of the
@@ -52,8 +55,13 @@ class Environment:
             except UnicodeDecodeError:
                 pass
 
+    def fixup_globals(self):
+        for name, value in self.extra_globals.items():
+            self.globals.setdefault(name, value)
+
     def execute(self, filename, content, subexpressions=False):
         print("Executing", filename, subexpressions)
+        self.fixup_globals()
         stdout = Stdout()
         compiled = None
         try:
@@ -96,17 +104,14 @@ class Environment:
             if name not in globals_before or globals_before[name] is not value)
         defines = dict(
             (key, {
-                "repr": str(htmlize_short_repr(local_scope[key])),
                 "json": jsonify(local_scope[key]),
                 "type": str(type(local_scope[key])),
-                "self_naming": getattr(htmlize_short_repr(local_scope[key]), "self_naming", False),
             })
             for key in local_scope
             if not isinstance(local_scope[key], types.ModuleType))
         command = Execution(
             filename=filename,
             content=content,
-            output="".join(str(x) for x in stdout.html_output),
             emitted=stdout.emitted,
             defines=defines,
             start_time=int(start * 1000),
@@ -125,7 +130,7 @@ class Environment:
             var_inspect.walk(parsed)
         except:
             return
-            properties["parse_error"] = str(htmlize(traceback.format_exc()))
+            properties["parse_error"] = jsonify(traceback.format_exc())
         else:
             properties = var_inspect.json
         if properties != self._cached_analysis.get(filename):
@@ -288,26 +293,15 @@ class Stdout:
     expr_limit = 10
 
     def __init__(self):
-        self.html_output = []
         self.emitted = []
         self.total_exprs_printed = 0
         self.exprs_printed = collections.Counter()
 
     def write(self, content):
-        h = htmlize(content)
-        self.html_output.append(h)
         self.emitted.append({
             "type": "print",
             "time": now(),
-            "parts": [{"type": "str", "str": content, "html": str(h)}],
-        })
-
-    def writehtml(self, content):
-        self.html_output.append(content)
-        self.emitted.append({
-            "type": "explicit_html",
-            "time": now(),
-            "html": str(content),
+            "parts": [{"type": "str", "str": content}],
         })
 
     def writejson(self, json):
@@ -316,13 +310,13 @@ class Stdout:
         self.emitted.append(json)
 
     def write_repr(self, o):
-        h = htmlize_repr(o)
-        self.html_output.append(h)
-        self.emitted.append({
-            "type": "plain_repr",
-            "time": now(),
-            "html": str(h)
-        })
+        self.emitted.append(jsonify(o))
 
     def flush(self):
         pass
+
+def add_global(name, value):
+    Environment.extra_globals[name] = value
+    Environment.predefined_names.add(name)
+    for env in Environment.active:
+        env.globals.setdefault(name, value)

@@ -6,40 +6,17 @@ try:
 except ImportError:
     np = None
 try:
-    from PIL import Image
-    from PIL.ImageFile import ImageFile
-except ImportError:
-    Image = None
-try:
     import cv2
 except ImportError:
     cv2 = None
 from io import BytesIO
 import re
 import json
-from urllib.parse import quote as url_quote
-from tempita import html, HTMLTemplate, html_quote
-from .htmlize import htmlize
-from webob import Response
+from .jsonify import jsonify
 from functools import singledispatch
 from collections import MutableMapping
-try:
-    from .matplotlibsupport import Plot
-except ImportError as e:
-    print("Could not import matplot support:", e)
 
-    class Plot:
-        def __init__(self, *args, **kw):
-            raise NotImplementedError("You must install matplotlib")
-try:
-    # FIXME: re-enable
-    if False:
-        from . import kerassupport
-        kerassupport
-except ImportError as e:
-    print("No Keras support:", e)
-
-builtin_names = ["listdir", "save", "cv_image", "Plot"]
+builtin_names = ["listdir", "save", "cv_image"]
 
 def make_data_url(content_type, content):
     return 'data:%s;base64,%s' % (content_type, base64.urlsafe_b64encode(content).decode('ascii').replace('\n', ''))
@@ -62,14 +39,9 @@ def save(o, path):
     with open(path, 'w') as fp:
         fp.write(str(o))
 
-if Image:
-    @save.register(Image.Image)
-    @save.register(ImageFile)
-    def save(o, path):
-        o.save(path)
-
-if cv2 and Image:
+if cv2:
     def cv_image(an_array):
+        from PIL import Image
         image = cv2.imencode(".png", an_array)[1].tostring()
         input = BytesIO(image)
         return Image.open(input)
@@ -120,7 +92,14 @@ class FilesDict(MutableMapping):
             yield filename
 
     def __len__(self):
-        return len(list(self))
+        return len(list(self.__iter__()))
+
+    def _sheets_json_(self):
+        return {
+            "type": "FilesDict",
+            "base": os.path.abspath(self.base),
+            "files": [jsonify(self[x]) for x in sorted(self)],
+        }
 
 class FileReference(str):
 
@@ -132,10 +111,19 @@ class FileReference(str):
         new_class = cls.extension_map.get(ext, cls)
         return new_class(f)
 
-    def _repr_html_(self):
+    def _sheets_json_(self):
+        data = {
+            "type": "filename",
+            "filename": str(self),
+            "exists": True,
+        }
         if not os.path.exists(self):
-            return html(not_exists_tmpl.substitute(f=self))
-        return html(no_preview_tmpl.substitute(f=self))
+            data["exists"] = False
+        data.update(self.extra_jsonify_info())
+        return data
+
+    def extra_jsonify_info(self):
+        return {}
 
     num_re = re.compile(r'\d+')
 
@@ -145,52 +133,6 @@ class FileReference(str):
         if not matches:
             raise ValueError("File has no number: {}".format(self))
         return int(matches[-1])
-
-class ImageReference(FileReference):
-    def _repr_html_(self):
-        preview = '<img src="/fetch?filename=%s" style="width: 180px; height: auto"/>' % (
-            url_quote(self))
-        return preview_tmpl.substitute(f=self, hover_html=preview)
-
-    def open(self):
-        if Image:
-            im = Image.open(self)
-            # This avoids running out of files: https://github.com/python-pillow/Pillow/issues/1237
-            try:
-                return im.copy()
-            finally:
-                im.close()
-        else:
-            raise NotImplementedError("You must  pip install pillow")
-
-    def opencv(self):
-        if cv2:
-            return cv2.imread(self)
-        else:
-            raise NotImplementedError("You must  pip install opencv-python")
-
-if Image:
-    # FIXME: weakref doesn't work like we'd want it to...
-    save_these = []
-
-    @htmlize.register(Image.Image)
-    @htmlize.register(ImageFile)
-    def htmlize_image(x):
-        from .http import http_objects
-        out = BytesIO()
-        x.save(out, format="png")
-        serve_data = Response(content_type="image/png", body=out.getvalue())
-        # This keeps it in memory, with the lifetime of the image:
-        x._serve_data = serve_data
-        save_these.append(serve_data)
-        url = http_objects.register(serve_data)
-        img = '<img src="%s" style="width: 180px; height=auto" />' % html_quote(url)
-        return html(preview_tmpl.substitute(f=repr(x), hover_html=img))
-
-FileReference.extension_map['.png'] = ImageReference
-FileReference.extension_map['.jpeg'] = ImageReference
-FileReference.extension_map['.jpg'] = ImageReference
-FileReference.extension_map['.gif'] = ImageReference
 
 class JsonReference(FileReference):
 
@@ -203,14 +145,3 @@ class JsonReference(FileReference):
             json.dump(value, fp)
 
 FileReference.extension_map['.json'] = JsonReference
-
-
-not_exists_tmpl = HTMLTemplate('''\
-<code class="file" title="{{f}} does not exist"><s>{{f}}</s></code>\
-''')
-preview_tmpl = HTMLTemplate('''\
-<code class="file" data-html="true", data-title="{{str(hover_html)}}" data-toggle="tooltip">{{f}}</code>\
-''')
-no_preview_tmpl = HTMLTemplate('''\
-<code class="file" data-title="No preview available" data-toggle="tooltip">{{f}}</code>\
-''')

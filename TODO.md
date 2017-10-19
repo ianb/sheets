@@ -28,7 +28,6 @@
   * Tabs for something: https://react.semantic-ui.com/modules/tab
   * Sidebar for something: https://react.semantic-ui.com/modules/sidebar
   * Search for navigating items: https://react.semantic-ui.com/modules/search
-  * Popup for image previews: https://react.semantic-ui.com/modules/popup
   * Modal for help: https://react.semantic-ui.com/modules/modal
   * Table for numpy arrays: https://react.semantic-ui.com/collections/table
   * Loader during execution: https://react.semantic-ui.com/elements/loader

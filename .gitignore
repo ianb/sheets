@@ -1,6 +1,8 @@
 /data
 /hexbug
 sheets-history.db
+/rnn
+/xor_network
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

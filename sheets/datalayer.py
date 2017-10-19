@@ -179,11 +179,10 @@ class Analysis(Command):
 
 class Execution(Command):
 
-    def __init__(self, *, filename, content, output, emitted, defines, start_time, end_time, exec_time, with_subexpressions=False, id=None):
+    def __init__(self, *, filename, content, emitted, defines, start_time, end_time, exec_time, with_subexpressions=False, id=None):
         super().__init__(id=id)
         self.filename = filename
         self.content = content
-        self.output = output
         self.emitted = emitted
         self.defines = defines
         self.start_time = start_time
@@ -196,7 +195,6 @@ class Execution(Command):
             return
         model.files[self.filename]["execution"] = {
             "content": self.content,
-            "output": self.output,
             "emitted": self.emitted,
             "defines": self.defines,
         }

@@ -27,18 +27,24 @@ def jsonify_plain(o, show_repr=False):
 
 jsonify_dispatched = singledispatch(jsonify_plain)
 
+def has_method(o, name):
+    if not hasattr(o, name):
+        return False
+    value = getattr(o, name)
+    return isinstance(value, types.MethodType)
+
 def jsonify(o, show_repr=False):
-    if hasattr(o, "_sheets_json_"):
+    if has_method(o, "_sheets_json_"):
         j = o._sheets_json_()
         return j
-    if hasattr(o, "_repr_html_"):
+    if has_method(o, "_repr_html_"):
         h = o._repr_html_()
         if h is None:
             print("Warning: object %r._repr_html_() returned None")
             return jsonify_plain(o)
         return {
             "type": "explicit_html",
-            "html": h,
+            "html": str(h),
         }
     j = jsonify_dispatched(o, show_repr=show_repr)
     j["show_repr"] = show_repr
@@ -52,7 +58,7 @@ jsonify.register = jsonify_dispatched.register
 jsonify.dispatch = jsonify_dispatched.dispatch
 
 @jsonify.register(types.FunctionType)
-def htmlize_func(x, show_repr=False):
+def jsonify_func(x, show_repr=False):
     return {
         "type": "FunctionType",
         "name": x.__qualname__,
@@ -119,7 +125,6 @@ def jsonify_print(*objects, sep=' ', end='\n', file=sys.stdout, flush=False):
     # FIXME: for some reason there's typically a wrapper on sys.stdout
     file = sys.stdout
     for o in objects:
-        sys.__stdout__.write(repr(["Got a part", o, type(o), jsonify(o), jsonify.dispatch(type(o))]) + "\n")
         d["parts"].append(jsonify(o))
     file.writejson(d)
 

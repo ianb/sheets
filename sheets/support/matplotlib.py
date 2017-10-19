@@ -2,30 +2,9 @@ from contextlib import contextmanager
 from io import BytesIO
 from tempita import html_quote
 from webob import Response
-from .http import http_objects
-import sys
-import types
-def make_class(class_name, *methods):
-    class NullClass:
-        name = class_name
-
-        def __init__(self, *args, **kw):
-            pass
-
-    def null_method(*args, **kw):
-        pass
-
-    for method in methods:
-        setattr(NullClass, method, null_method)
-    setattr(_macosx, class_name, NullClass)
-_macosx = types.ModuleType("matplotlib.backends._macosx")
-make_class("Timer")
-make_class("FigureCanvas", "invalidate")
-make_class("FigureManager")
-make_class("NavigationToolbar2")
-sys.modules["matplotlib.backends._macosx"] = _macosx
-
+from ..http import http_objects
 from matplotlib import pyplot
+from ..env import add_global
 
 # Just a way to save stuff for now
 save_these = []
@@ -68,3 +47,5 @@ class Plot:
         url = http_objects.register(serve_data)
         img = '<img src="%s" style="width: 50%%; height=auto" />' % html_quote(url)
         return img
+
+add_global("Plot", Plot)

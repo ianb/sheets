@@ -141,7 +141,6 @@ export const Execution = AllCommands.Execution = class Execution extends Command
     super()
     this.filename = options.filename;
     this.content = options.content;
-    this.output = options.output;
     this.emitted = options.emitted;
     this.defines = options.defines;
     this.start_time = options.start_time;
@@ -156,7 +155,6 @@ export const Execution = AllCommands.Execution = class Execution extends Command
     }
     f.output = {
       content: this.content,
-      output: this.output,
       emitted: this.emitted,
       defines: this.defines,
     };

@@ -589,8 +589,38 @@ Factories.dump = class dump extends React.Component {
 };
 
 Factories.image = class image extends React.Component {
+  constructor() {
+    super();
+    this.state = {size: 180};
+    this.watching = false;
+    this.minSize = 100;
+  }
+
   render() {
-    return <img style={{width: "180px", height: "auto"}} src={this.props.url} />;
+    return <img onMouseMove={this.onMouseMove.bind(this)} onMouseUp={this.onMouseUp.bind(this)} onMouseDown={this.onMouseDown.bind(this)} style={{width: this.state.size, height: "auto"}} draggable="false" src={this.props.url} />;
+  }
+
+  onMouseDown(event) {
+    this.startX = event.pageX;
+    this.startY = event.pageY;
+    this.startSize = this.state.size;
+    this.watching = true;
+  }
+
+  onMouseUp(event) {
+    this.onMouseMove(event);
+    this.watching = false;
+  }
+
+  onMouseMove(event) {
+    if (!this.watching) {
+      return;
+    }
+    let move = Math.sqrt(Math.pow(this.startX - event.pageX, 2), Math.pow(this.startY - event.pageY, 2));
+    let dir = this.startX < event.pageX ? 1 : -1;
+    let newSize = this.startSize + Math.floor(dir * move);
+    newSize = Math.max(newSize, this.minSize);
+    this.setState({size: newSize});
   }
 };
 

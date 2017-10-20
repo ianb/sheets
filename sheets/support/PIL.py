@@ -14,8 +14,8 @@ save_these = []
 
 @jsonify.register(Image.Image)
 @jsonify.register(ImageFile)
-def jsonify_image(x):
-    from .http import http_objects
+def jsonify_image(x, show_repr=False):
+    from ..http import http_objects
     out = BytesIO()
     x.save(out, format="png")
     serve_data = Response(content_type="image/png", body=out.getvalue())

@@ -10,19 +10,15 @@
   * Show incremental output
   * Put a counter into loops, so loops can be tracked for progress
     * Start with something simpler like for_reporter(iter)
-* Consider https://github.com/buildo/react-autosize-textarea for textarea
 * Consider https://github.com/JedWatson/react-codemirror for textarea
-* Switch to a builder (webpack I guess)
 * Handle empty directories (currently nothing is rendered)
 * Use random number as the ID of the server, do full resync if the page isn't setup for the server
-* Allow draggable resizing of images
+* on_open, after sending all events, check actual file content against expected (due to replay) content, and create FileEdits if necessary.
 * Markdown support
   * Allow embedding code (that generates things) inside the Markdown
   * Allow embedding fields in the Markdown (that can be read from code)
   * Use https://github.com/benrlodge/react-simplemde-editor and https://simplemde.com/
-* Move to JSON instead of HTML from the server
-  * Have React components to render them
-  * Move "objects" that are referrable to a specially-named key, like `{__objects: ["uuid1", "uuid2"]}` – scan deeply for those objects to know what to store/keep.
+* Move "objects" that are referrable to a specially-named key, like `{__objects: ["uuid1", "uuid2"]}` – scan deeply for those objects to know what to store/keep.
   * When rendering the renderer should be told if a remote object is alive or dead
 * Switch to Semantic UI: https://react.semantic-ui.com/introduction (mostly done)
   * Tabs for something: https://react.semantic-ui.com/modules/tab

@@ -1,6 +1,6 @@
 import React from 'react';
 import * as ReactDOM from 'react-dom';
-import { Button, Container, Dropdown, Menu, Header, Icon, TextArea, Card, Grid, Popup } from 'semantic-ui-react';
+import { Button, Container, Dropdown, Menu, Header, Icon, TextArea, Card, Grid, Popup, List, Accordion, Label, Modal } from 'semantic-ui-react';
 import { model } from './datalayer';
 import { updateFile, deleteFile, executeFile } from './script';
 
@@ -10,7 +10,6 @@ class Page extends React.Component {
     filenames.sort()
     let files = filenames.map((name, index) => <File key={name} name={name} index={index} {...this.props.files.get(name)} />);
     return <div>
-      {this.props.showHelp ? <Help /> : null}
       {this.props.showNavigation ? <Navigate {...this.props} /> : null}
       <PageMenu {...this.props} />
       <Container style={{ marginTop: '7em' }}>
@@ -65,15 +64,13 @@ class PageMenu extends React.Component {
             <Dropdown.Item>List Item</Dropdown.Item>
           </Dropdown.Menu>
         </Dropdown>
-        <Menu.Item as="a" onClick={this.onShowHelp.bind(this)}>Shortcuts: Ctrl+?</Menu.Item>
+        <Help trigger={
+          <Menu.Item as="a">Shortcuts: Ctrl+?</Menu.Item>
+        } />
       </Container>
     </Menu>;
   }
 
-  onShowHelp() {
-    model.showHelp = !model.showHelp;
-    renderPage();
-  }
 }
 
 class CloudStatus extends React.Component {
@@ -198,7 +195,7 @@ class File extends React.Component {
 
   refreshFocus() {
     if (!model.showNavigation && model.focusName == this.props.name && !this.state.collapsed) {
-      this.textarea.focus();
+      this.textarea && this.textarea.focus();
     }
   }
 
@@ -239,12 +236,17 @@ class Output extends React.Component {
       defines = [];
       for (let name in this.props.output.defines) {
         defines.push(
-          <li key={name}>
+          <List.Item key={name}>
             <VariableDefinition name={name} {...this.props.output.defines[name]} />
-          </li>
+          </List.Item>
         );
       }
-      defines = <div>Defines: <ul className="varlist">{defines}</ul></div>;
+      defines = <div>
+        Defines:
+        <List>
+          {defines}
+        </List>
+       </div>;
     }
     let imports = null;
     let used = null;
@@ -306,11 +308,11 @@ class Output extends React.Component {
 
 class VariableDefinition extends React.Component {
   render() {
-    let r = <span dangerouslySetInnerHTML={{__html: this.props.repr}}></span>;
-    if (this.props.self_naming) {
-      return r;
+    let expr = this.props.json;
+    if (this.props.name === expr.name) {
+      return renderRemoteItem(expr);
     } else {
-      return <span><code>{this.props.name}=</code>{r}</span>;
+      return <span><code>{this.props.name}=</code>{renderRemoteItem(expr)}</span>;
     }
   }
 }
@@ -385,76 +387,91 @@ class Navigate extends React.Component {
   }
 }
 
-class Modal extends React.Component {
-  render() {
-    // FIXME: convert to Semantic
-    return <div className="modal" ref={modalEl => this.modalEl = modalEl}>
-      <div className="modal-dialog" role="document">
-        <div className="modal-content">
-          <div className="modal-header">
-            <h5 className="modal-title">{this.props.title}</h5>
-            <button type="button" className="close" onClick={this.props.onClose.bind(this)} aria-label="Close">
-              <span aria-hidden="true">&times;</span>
-            </button>
-          </div>
-          <div className="modal-body">
-            {this.props.children}
-          </div>
-          <div className="modal-footer">
-            <button type="button" className="btn btn-primary" onClick={this.props.onClose.bind(this)}>Close</button>
-          </div>
-        </div>
-      </div>
-    </div>;
-  }
-
-}
-
 class Help extends React.Component {
   render() {
-    return <Modal title="Keyboard Shortcuts" onClose={this.onClose.bind(this)}>
-      <table className="table">
-        <tbody>
-          <tr>
-            <td>Shift + Enter</td>
-            <td>Execute current cell</td>
-          </tr>
-          <tr>
-            <td>Shift + Ctrl + Enter</td>
-            <td>Execute current cell, tracking subexpressions</td>
-          </tr>
-          <tr>
-            <td>Command/Ctrl + Shift + A</td>
-            <td>Execute all cells</td>
-          </tr>
-          <tr>
-            <td>Ctrl + T</td>
-            <td>File/cell browser</td>
-          </tr>
-          <tr>
-            <td>Ctrl + E</td>
-            <td>Expand/collapse current cell</td>
-          </tr>
-          <tr>
-            <td>Ctrl + Shift + E</td>
-            <td>Expand/collapse all cells</td>
-          </tr>
-        </tbody>
-      </table>
+    return <Modal trigger={this.props.trigger}>
+      <Modal.Header>
+        Keyboard Shortcuts
+      </Modal.Header>
+      <Modal.Content>
+        <table className="table">
+          <tbody>
+            <tr>
+              <td>Shift + Enter</td>
+              <td>Execute current cell</td>
+            </tr>
+            <tr>
+              <td>Shift + Ctrl + Enter</td>
+              <td>Execute current cell, tracking subexpressions</td>
+            </tr>
+            <tr>
+              <td>Command/Ctrl + Shift + A</td>
+              <td>Execute all cells</td>
+            </tr>
+            <tr>
+              <td>Ctrl + T</td>
+              <td>File/cell browser</td>
+            </tr>
+            <tr>
+              <td>Ctrl + E</td>
+              <td>Expand/collapse current cell</td>
+            </tr>
+            <tr>
+              <td>Ctrl + Shift + E</td>
+              <td>Expand/collapse all cells</td>
+            </tr>
+          </tbody>
+        </table>
+      </Modal.Content>
     </Modal>;
-  }
-
-  onClose() {
-    model.showHelp = false;
-    renderPage();
   }
 }
 
 function renderRemoteItem(item, key, extraProps) {
+  if (!item) {
+    let exc = new Error("renderRemoteItem got a null item");
+    console.error("renderRemoteItem got a null item", exc);
+    return <Accordion>
+      <Accordion.Title>
+        <Label color="red" icon="warning sign">null item</Label>
+      </Accordion.Title>
+      <Accordion.Content>
+        <pre>{exc.stack}</pre>
+      </Accordion.Content>
+    </Accordion>;
+  }
   extraProps = extraProps || {};
   let type = item.type;
   let Factory = Factories[type] || GenericFactory;
   return <Factory key={key} {...item} {...extraProps} />;
+}
+
+class Folded extends React.Component {
+  constructor() {
+    super();
+    this.state = {active: false};
+  }
+
+  render() {
+    let className = this.props.className || "";
+    if (this.props.inline) {
+      className += " inline";
+    }
+    return <Accordion styled className={className}>
+      <Accordion.Title onClick={this.toggleAccordion.bind(this)} active={this.state.active}>
+        <Icon name="dropdown" />
+        {this.props.title}
+      </Accordion.Title>
+      <Accordion.Content active={this.state.active}>
+        {this.props.children}
+      </Accordion.Content>
+    </Accordion>;
+  }
+
+  toggleAccordion() {
+    console.log("toggling");
+    this.setState({active: !this.state.active});
+  }
 }
 
 const Factories = {};
@@ -481,7 +498,16 @@ Factories.plain_str = class plain_str extends React.Component {
 
 Factories.str = class str extends React.Component {
   render() {
-    return <code>{JSON.stringify(this.props.str)}</code>;
+    let s = JSON.stringify(this.props.str);
+    if (s.length > 100) {
+      let longS = '"""' + s.substr(1, s.length - 2) + '"""';
+      longS = longS.replace(/\\n/g, "\n");
+      let title = <span><code>{s.substr(0, 40)}</code>...<code>{s.substr(s.length-20)}</code></span>;
+      return <Folded className="inline" title={title}>
+        <pre style={{overflowWrap: "break-word", whiteSpace: "normal"}}>{longS}</pre>
+      </Folded>;
+    }
+    return <code>{s}</code>;
   }
 };
 
@@ -568,6 +594,7 @@ Factories.image = class image extends React.Component {
 
 Factories.filename = class filename extends React.Component {
   render() {
+    let icon = this.props.icon || "file outline";
     let filename = this.props.filename;
     if (this.props.base && filename.startsWith(this.props.base)) {
       filename = filename.substr(this.props.base.length);
@@ -575,28 +602,30 @@ Factories.filename = class filename extends React.Component {
         filename = filename.substr(1);
       }
     }
-    console.log("filename", this.props.filename, filename, this.props.base);
+    let inner = <span>
+      <Icon name={icon} />
+      <code>{filename}</code>
+    </span>;
     if (this.props.embedded) {
-      return <Popup trigger={(
-          <code>{filename}</code>
-        )}>
+      return <Popup trigger={inner}>
         {renderRemoteItem(this.props.embedded)}
       </Popup>;
     }
-    return <code>{filename}</code>;
+    return inner;
   }
 };
 
 Factories.FilesDict = class FilesDict extends React.Component {
   render() {
-    console.log("render files", this.props.files);
     return <div>
-      Files in <code>{this.props.base}</code>:
-      <ul>
+      <span style={{marginRight: "1em"}}>
+        Files in <code>{this.props.base}</code>:
+      </span>
+      <List horizontal relaxed>
         {this.props.files.map(
-          (item, index) => <li key={index}>{renderRemoteItem(item, null, {base: this.props.base})}</li>
+          (item, index) => <List.Item key={index}>{renderRemoteItem(item, null, {base: this.props.base})}</List.Item>
         )}
-      </ul>
+      </List>
     </div>;
   }
 };

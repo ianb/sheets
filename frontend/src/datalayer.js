@@ -3,7 +3,6 @@ export let AllCommands = {};
 export class Model {
   constructor() {
     this.files = new Map();
-    this.showHelp = false;
     this.showNavigation = false;
     this.connectionLive = false;
     this.connectionDirection = null;

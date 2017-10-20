@@ -14,8 +14,10 @@ Mousetrap.bind('tab', (event) => {
 });
 
 Mousetrap.bind(["ctrl+?", "ctrl+/"], () => {
-  model.showHelp = !model.showHelp;
-  renderPage();
+  // FIXME: make this work
+  // maybe trigger an artificial click?
+  //model.showHelp = !model.showHelp;
+  //renderPage();
   return false;
 });
 
@@ -63,7 +65,7 @@ Mousetrap.bind("ctrl+t", (event) => {
 });
 
 Mousetrap.bind("escape", (event) => {
-  model.showNavigation = model.showHelp = false;
+  model.showNavigation = false;
   renderPage();
 });
 

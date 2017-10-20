@@ -1,11 +1,14 @@
 from PIL import Image
 from PIL.ImageFile import ImageFile
 from ..stdlib import FileReference, save
-from tempita import html, html_quote
 from ..jsonify import jsonify
 from webob import Response
 from urllib.parse import quote as url_quote
 from io import BytesIO
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 
 save_these = []
 
@@ -31,7 +34,8 @@ class ImageReference(FileReference):
             "embedded": {
                 "type": "image",
                 "url": "/fetch?filename=%s" % url_quote(self),
-            }
+            },
+            "icon": "file image outline",
         }
 
     def open(self):

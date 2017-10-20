@@ -1,3 +1,8 @@
 .accordion.inline {
   display: inline-block;
 }
+
+.dimmer.loading {
+   background-color: rgba(0, 100, 60, .3);
+   pointer-events: none;
+}

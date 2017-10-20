@@ -1,6 +1,6 @@
 import React from 'react';
 import * as ReactDOM from 'react-dom';
-import { Button, Container, Dropdown, Menu, Header, Icon, TextArea, Card, Grid, Popup, List, Accordion, Label, Modal } from 'semantic-ui-react';
+import { Button, Container, Dropdown, Menu, Header, Icon, TextArea, Card, Grid, Popup, List, Accordion, Label, Modal, Dimmer, Loader, Segment } from 'semantic-ui-react';
 import { model } from './datalayer';
 import { updateFile, deleteFile, executeFile } from './script';
 
@@ -107,29 +107,32 @@ class File extends React.Component {
     }
     let rows = this.state.value.split("\n").length + 1
     return <div ref={baseEl => this.baseEl = baseEl} data-name={this.props.name} data-collapsed={this.state.collapsed ? "1" : null}>
-      <Card style={{width: "100%", marginBottom: "1em"}}>
-        <Card.Content>
-          <Card.Header>
-            <Grid>
-              <Grid.Column floated="left">
-                <code>{this.props.name}</code>
-              </Grid.Column>
-              <Grid.Column floated="right" width={2}>
-                <Container textAlign="right" style={{whiteSpace: "nowrap"}}>
-                  <Button size="mini" onClick={this.onDelete.bind(this)} negative>del</Button>
-                  <Button size="mini" onClick={this.onCollapse.bind(this)}>{this.state.collapsed ? '+' : '-'}</Button>
-                </Container>
-              </Grid.Column>
-            </Grid>
-          </Card.Header>
-        </Card.Content>
-        <Card.Content>
-          {this.state.collapsed ? null :
-            <TextArea tabIndex={this.props.index + 1} className="mousetrap" autoHeight rows={4} style={{width: "100%"}} onFocus={this.onFocus.bind(this)} defaultValue={this.state.value} onChange={this.onChange.bind(this)} onKeyDown={this.onKeyDown.bind(this)}></TextArea>
-          }
-          <Output content={this.state.value} output={this.props.output} analysis={this.props.analysis} />
-        </Card.Content>
-      </Card>
+      <Dimmer.Dimmable as={Segment} dimmed={this.props.isExecuting}>
+        <Dimmer className="loading" active={this.props.isExecuting}><Loader active /></Dimmer>
+        <Card style={{width: "100%", marginBottom: "1em"}}>
+          <Card.Content>
+            <Card.Header>
+              <Grid>
+                <Grid.Column floated="left">
+                  <code>{this.props.name}</code>
+                </Grid.Column>
+                <Grid.Column floated="right" width={2}>
+                  <Container textAlign="right" style={{whiteSpace: "nowrap"}}>
+                    <Button size="mini" onClick={this.onDelete.bind(this)} negative>del</Button>
+                    <Button size="mini" onClick={this.onCollapse.bind(this)}>{this.state.collapsed ? '+' : '-'}</Button>
+                  </Container>
+                </Grid.Column>
+              </Grid>
+            </Card.Header>
+          </Card.Content>
+          <Card.Content>
+            {this.state.collapsed ? null :
+              <TextArea tabIndex={this.props.index + 1} className="mousetrap" autoHeight rows={4} style={{width: "100%"}} onFocus={this.onFocus.bind(this)} defaultValue={this.state.value} onChange={this.onChange.bind(this)} onKeyDown={this.onKeyDown.bind(this)}></TextArea>
+            }
+            <Output content={this.state.value} output={this.props.output} analysis={this.props.analysis} />
+          </Card.Content>
+        </Card>
+      </Dimmer.Dimmable>
     </div>;
   }
 
@@ -469,7 +472,6 @@ class Folded extends React.Component {
   }
 
   toggleAccordion() {
-    console.log("toggling");
     this.setState({active: !this.state.active});
   }
 }

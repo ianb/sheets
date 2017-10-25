@@ -6,3 +6,34 @@
    background-color: rgba(0, 100, 60, .3);
    pointer-events: none;
 }
+
+.CodeMirror {
+  height: auto;
+  border: 2px inset #aaa;
+}
+
+.CodeMirror-scroll {
+  height: auto;
+  overflow-y: hidden;
+  overflow-x: auto;
+}
+
+div.inline-print {
+  display: inline-block;
+}
+
+.print-item {
+  margin-right: 1em;
+}
+
+.print-no-sep .print-item {
+  margin-right: 0;
+}
+
+table.attributes th {
+  text-align: left;
+}
+
+.ui.styled.accordion .title {
+  color: #000;
+}

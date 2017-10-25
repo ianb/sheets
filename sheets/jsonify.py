@@ -4,6 +4,7 @@ import astor
 import time
 import types
 import builtins
+import inspect
 from functools import singledispatch
 
 builtins_set = set()
@@ -58,12 +59,26 @@ jsonify.register = jsonify_dispatched.register
 jsonify.dispatch = jsonify_dispatched.dispatch
 
 @jsonify.register(types.FunctionType)
+@jsonify.register(types.BuiltinFunctionType)
 def jsonify_func(x, show_repr=False):
     return {
         "type": "FunctionType",
         "name": x.__qualname__,
+        "signature": str(inspect.signature(x)),
         # FIXME: include scope or module or some other info
     }
+
+@jsonify.register(types.MethodType)
+@jsonify.register(types.BuiltinMethodType)
+def jsonify_method(x, show_repr=False):
+    return {
+        "type": "MethodType",
+        "qualname": x.__qualname__,
+        "name": x.__name__,
+        "self": jsonify(x.__self__),
+        "signature": str(inspect.signature(x)),
+    }
+
 
 @jsonify.register(type)
 def jsonify_class(x, show_repr=False):
@@ -163,7 +178,7 @@ def print_expr_should_ignore(expr, value):
         expr_name = expr.split(".")[-1]
         if class_name == expr_name:
             return True
-    if isinstance(value, types.MethodType):
+    if isinstance(value, (types.MethodType, types.BuiltinMethodType)):
         method_name = value.__name__
         prop_name = expr.split(".")[-1]
         if method_name == prop_name:

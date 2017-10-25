@@ -1,7 +1,7 @@
 {
-  "name": "semantic-ui-react-example-webpack2",
-  "version": "1.0.0",
-  "description": "Get started with Semantic UI React and Webpack 2",
+  "name": "sheets-frontend",
+  "version": "0.0.0",
+  "description": "Frontend for Sheets",
   "main": "index.js",
   "scripts": {
     "analyze": "cross-env ANALYZE_ENV=true yarn build",
@@ -10,7 +10,7 @@
     "build:production": "cross-env NODE_ENV=production yarn build",
     "build_watch": "webpack --progress --colors --watch"
   },
-  "author": "Alexander Fedyashov <a@fedyashov.com>",
+  "author": "Ian Bicking <ian@ianbicking.org>",
   "license": "MIT",
   "dependencies": {
     "babel-core": "^6.26.0",
@@ -21,11 +21,14 @@
     "babel-preset-stage-1": "^6.24.1",
     "cross-env": "^5.0.5",
     "react": "^15.6.2",
+    "react-codemirror": "^1.0.0",
     "react-dom": "^15.6.2",
     "semantic-ui-react": "^0.74.2",
     "webpack": "^2.7.0"
   },
   "devDependencies": {
+    "css-loader": "^0.28.7",
+    "style-loader": "^0.19.0",
     "webpack-bundle-analyzer": "^2.8.2"
   }
 }

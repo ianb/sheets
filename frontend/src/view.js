@@ -1,8 +1,14 @@
 import React from 'react';
 import * as ReactDOM from 'react-dom';
 import { Button, Container, Dropdown, Menu, Header, Icon, TextArea, Card, Grid, Popup, List, Accordion, Label, Modal, Dimmer, Loader, Segment } from 'semantic-ui-react';
+import CodeMirror from 'react-codemirror';
 import { model } from './datalayer';
 import { updateFile, deleteFile, executeFile } from './script';
+require('codemirror/lib/codemirror.css');
+require("../public/style.css");
+require('codemirror/mode/python/python');
+require('codemirror/mode/markdown/markdown');
+
 
 class Page extends React.Component {
   render() {
@@ -106,6 +112,25 @@ class File extends React.Component {
       console.error("Dead file:", this.props.name, model.files[this.props.name]);
     }
     let rows = this.state.value.split("\n").length + 1
+    let codeMirrorOptions = {
+      mode: "python",
+      lineNumber: true,
+      indentUnit: 4,
+      // extraKeys: something for shift+Enter, see https://codemirror.net/doc/manual.html#option_keyMap
+      lineWrapping: true,
+      viewportMargin: Infinity,
+      extraKeys: {
+        "Cmd-Enter": () => {
+          executeFile(this.props.name, false);
+        },
+        "Shift-Enter": () => {
+          executeFile(this.props.name, false);
+        },
+        "Shift-Cmd-Enter": () => {
+          executeFile(this.props.name, true);
+        },
+      },
+    };
     return <div ref={baseEl => this.baseEl = baseEl} data-name={this.props.name} data-collapsed={this.state.collapsed ? "1" : null}>
       <Dimmer.Dimmable as={Segment} dimmed={this.props.isExecuting}>
         <Dimmer className="loading" active={this.props.isExecuting}><Loader active /></Dimmer>
@@ -126,54 +151,34 @@ class File extends React.Component {
             </Card.Header>
           </Card.Content>
           <Card.Content>
-            {this.state.collapsed ? null :
-              <TextArea tabIndex={this.props.index + 1} className="mousetrap" autoHeight rows={4} style={{width: "100%"}} onFocus={this.onFocus.bind(this)} defaultValue={this.state.value} onChange={this.onChange.bind(this)} onKeyDown={this.onKeyDown.bind(this)}></TextArea>
-            }
+            <CodeMirror ref={codeMirrorComponent => this.codeMirrorComponent = codeMirrorComponent} preserveScrollPosition={true} value={this.state.value} onChange={this.onChangeCodeMirror.bind(this)} options={codeMirrorOptions} />
             <Output content={this.state.value} output={this.props.output} analysis={this.props.analysis} />
           </Card.Content>
         </Card>
       </Dimmer.Dimmable>
     </div>;
+    // See also https://github.com/JedWatson/react-codemirror#properties
   }
 
-  get textarea() {
-    return this.baseEl && this.baseEl.querySelector("textarea");
+  get codeMirror() {
+    return this.codeMirrorComponent && this.codeMirrorComponent.getCodeMirror();
   }
 
   componentWillReceiveProps(nextProps) {
     // seenValues is a really hacky way to avoid some overwrite problems
     // something about the order and flow of change events should instead be fixed
-    if (!this.textarea) {
-      console.log("Huh, no textarea");
-      return;
-    }
-    if (nextProps.content != this.textarea.value && !this.seenValues.includes(this.textarea.value)) {
-      let selectionStart = this.textarea.selectionStart;
-      let selectionEnd = this.textarea.selectionEnd;
-      this.textarea.value = nextProps.content;
-      this.textarea.selectionStart = selectionStart;
-      this.textarea.selectionEnd = selectionEnd;
-    }
     this.setState({value: nextProps.content});
-  }
-
-  onChange(event) {
-    let target = event.target;
-    this.setState({value: target.value});
-    while (this.seenValues.length > 10) {
-      this.seenValues.shift();
-    }
-    this.seenValues.push(target.value)
-    if (!this.updateTimeout) {
-      this.updateTimeout = setTimeout(() => {
-        updateFile(this.props.name, target.value);
-        this.updateTimeout = null;
-      }, 300);
+    if (this.codeMirror) {
+      let cur = this.codeMirror.getValue();
+      if (cur != nextProps.content) {
+        this.codeMirror.setValue(nextProps.content);
+      }
     }
   }
 
-  onFocus() {
-    model.focusName = this.props.name;
+  onChangeCodeMirror(newValue) {
+    this.setState({value: newValue});
+    updateFile(this.props.name, newValue);
   }
 
   onDelete(event) {
@@ -211,6 +216,7 @@ class File extends React.Component {
   }
 
   componentDidMount() {
+    return;
     this.refreshFocus();
     this.refreshSelection();
     this.baseEl.addEventListener("collapse", () => {
@@ -222,11 +228,13 @@ class File extends React.Component {
   }
 
   componentDidUpdate() {
+    return;
     this.refreshFocus();
     this.refreshSelection();
   }
 
   componentWillUnmount() {
+    return;
     this.selectionStart = this.textarea.selectionStart;
     this.selectionEnd = this.textarea.selectionEnd;
   }
@@ -400,11 +408,11 @@ class Help extends React.Component {
         <table className="table">
           <tbody>
             <tr>
-              <td>Shift + Enter</td>
+              <td>Shift + Enter / Command + Enter</td>
               <td>Execute current cell</td>
             </tr>
             <tr>
-              <td>Shift + Ctrl + Enter</td>
+              <td>Shift + Command + Enter</td>
               <td>Execute current cell, tracking subexpressions</td>
             </tr>
             <tr>
@@ -521,7 +529,19 @@ Factories.explicit_html = class explicit_html extends React.Component {
 
 Factories.FunctionType = class FunctionType extends React.Component {
   render() {
-    return <code>{this.props.name}()</code>;
+    return <code>{this.props.name}{this.props.signature}</code>;
+  }
+};
+
+Factories.MethodType = class MethodType extends React.Component {
+  render() {
+    return <code>{this.props.qualname}{this.props.signature} of {renderRemoteItem(this.props.self)}</code>;
+  }
+};
+
+Factories.docstring = class docstring extends React.Component {
+  render() {
+    return <pre>{this.props.docstring}</pre>;
   }
 };
 
@@ -556,6 +576,17 @@ Factories.tuple = Factories.list = class list_tuple extends React.Component {
   }
 };
 
+Factories.dict = class dict extends React.Component {
+  render() {
+    let parts = [];
+    for (let i=0; i < this.props.contents.length; i++) {
+      let item = this.props.contents[i];
+      parts.push(<span key={i}>{renderRemoteItem(item[0])}<code style={{whiteSpace: "nowrap"}}>: </code>{renderRemoteItem(item[1])}</span>);
+    }
+    return <span><code>{"{"}</code>{parts}<code>{"}"}</code></span>;
+  }
+};
+
 Factories.print_expr = class print_expr extends React.Component {
   render() {
     return <dl>
@@ -567,16 +598,29 @@ Factories.print_expr = class print_expr extends React.Component {
 
 Factories.print = class print extends React.Component {
   render() {
+    let sep = this.props.sep === undefined ? " " : this.props.sep;
+    let end = this.props.end === undefined ? "\n" : this.props.end;
     let parts = [];
     for (let i=0; i < this.props.parts.length; i++) {
       let item = this.props.parts[i];
       if (item.type === "str") {
-        parts.push(item.str);
+        parts.push(<code className="print-item" key={i}>{item.str}</code>);
       } else {
-        parts.push(renderRemoteItem(item, i));
+        parts.push(<span className="print-item" key={i}>{renderRemoteItem(item)}</span>);
+      }
+      if (sep != "" && sep != " ") {
+        parts.push(<code key={`${i}-sep`}>{sep}</code>);
       }
     }
-    return <div>
+    let className = "";
+    if (this.props.end == "" || this.props.end == " ") {
+      parts.push(this.props.end);
+      className += " inline-print";
+    }
+    if (sep != " ") {
+      className += " print-no-sep";
+    }
+    return <div className={className}>
       {parts}
     </div>;
   }
@@ -659,6 +703,29 @@ Factories.FilesDict = class FilesDict extends React.Component {
         )}
       </List>
     </div>;
+  }
+};
+
+Factories.watch = class watch extends React.Component {
+  render() {
+    let attrs = [];
+    let title = renderRemoteItem(this.props.obj);
+    if (this.props.label) {
+      title = <span><strong>{this.props.label}:</strong> {title}</span>;
+    }
+    for (let pair of this.props.attributes) {
+      let name = pair[0];
+      let value = pair[1];
+      attrs.push(<tr key={name}><th>{name}</th><td>{renderRemoteItem(value)}</td></tr>);
+    }
+    return <Folded className="inline" title={title}>
+      <table className="attributes">
+        <tbody>
+          {attrs}
+        </tbody>
+      </table>
+      {this.props.doc ? renderRemoteItem(this.props.doc) : null}
+    </Folded>;
   }
 };
 

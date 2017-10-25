@@ -14,16 +14,22 @@ const webpackConfig = {
   },
 
   module: {
-    rules: [{
-      test: /\.(js|jsx)$/,
-      exclude: /node_modules/,
-      use: {
-        loader: 'babel-loader',
-        options: {
-          retainLines: true,
-        }
+    rules: [
+      {
+        test: /\.(js|jsx)$/,
+        exclude: /node_modules/,
+        use: {
+          loader: 'babel-loader',
+          options: {
+            retainLines: true,
+          }
+        },
       },
-    }],
+      {
+        test: /\.css$/,
+        use: ['style-loader', 'css-loader']
+      }
+    ],
   },
 
   plugins: [

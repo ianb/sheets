@@ -15,8 +15,9 @@ import json
 from .jsonify import jsonify
 from functools import singledispatch
 from collections import MutableMapping
+from .watcher import watch
 
-builtin_names = ["listdir", "save", "cv_image"]
+builtin_names = ["listdir", "save", "cv_image", "watch"]
 
 def make_data_url(content_type, content):
     return 'data:%s;base64,%s' % (content_type, base64.urlsafe_b64encode(content).decode('ascii').replace('\n', ''))

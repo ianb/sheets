@@ -54,7 +54,9 @@ function incoming(o) {
     return;
   }
   let command = new CommandClass(o);
-  console.log("Incoming:", command);
+  if (!(command instanceof AllCommands.Analysis)) {
+    console.log("Incoming:", command);
+  }
   model.setConnectionDirection("down");
   model.applyCommand(command);
 }

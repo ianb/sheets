@@ -10,7 +10,6 @@
   * Show incremental output
   * Put a counter into loops, so loops can be tracked for progress
     * Start with something simpler like for_reporter(iter)
-* Consider https://github.com/JedWatson/react-codemirror for textarea
 * Handle empty directories (currently nothing is rendered)
 * Use random number as the ID of the server, do full resync if the page isn't setup for the server
 * on_open, after sending all events, check actual file content against expected (due to replay) content, and create FileEdits if necessary.
@@ -24,7 +23,10 @@
   * Tabs for something: https://react.semantic-ui.com/modules/tab
   * Sidebar for something: https://react.semantic-ui.com/modules/sidebar
   * Search for navigating items: https://react.semantic-ui.com/modules/search
-  * Modal for help: https://react.semantic-ui.com/modules/modal
   * Table for numpy arrays: https://react.semantic-ui.com/collections/table
   * Loader during execution: https://react.semantic-ui.com/elements/loader
   * Maybe labels for variable definitions: https://react.semantic-ui.com/elements/label
+* Fix keyboard shortcut for help and navigation
+  * Fix navigation generally
+* Use tqdm: https://pypi.python.org/pypi/tqdm
+* Send all the initializing messages in one bunch, and process them with one render
